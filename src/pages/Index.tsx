@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import ClaimStage from '@/components/ClaimStage';
 import StageConnector from '@/components/StageConnector';
@@ -366,11 +365,44 @@ const Index = () => {
   const handleSaveConfiguration = async () => {
     setIsSaving(true);
     
-    const configuration = {
-      stages,
-      formFields,
-      documents,
-      actions
+    // Transform the data into the requested structure
+    const transformedData = {
+      stages: stages.map(stageName => {
+        return {
+          stageName: stageName,
+          fields: formFields[stageName]?.map(field => ({
+            name: field.fieldLabel,
+            type: field.fieldType.toLowerCase(),
+            mandatory: field.mandatory,
+            validation: field.validation
+          })) || [],
+          documents: documents[stageName]?.map(doc => ({
+            name: doc.documentType,
+            mandatory: doc.mandatory,
+            maxSize: doc.maxSize,
+            allowedFormat: doc.format
+          })) || [],
+          actions: actions[stageName]?.map(action => {
+            const actionData: {
+              option: string;
+              stage?: string;
+              buttonLabel?: string;
+              condition?: string;
+            } = {
+              option: action.action.toLowerCase(),
+              buttonLabel: action.buttonLabel,
+              condition: action.condition
+            };
+            
+            // Only include stage if it's specified and not an exit action
+            if (action.nextStage && !action.nextStage.startsWith("Exit")) {
+              actionData.stage = action.nextStage;
+            }
+            
+            return actionData;
+          }) || []
+        };
+      })
     };
     
     try {
@@ -379,8 +411,10 @@ const Index = () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(configuration),
+        body: JSON.stringify(transformedData),
       });
+      
+      console.log('Configuration sent:', transformedData);
       
       // Since this is a dummy API, we'll just simulate a success
       setTimeout(() => {
@@ -880,3 +914,4 @@ const Index = () => {
 };
 
 export default Index;
+</lov
