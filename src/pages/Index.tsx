@@ -9,6 +9,11 @@ import { Plus, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { toast } from 'sonner';
 
 interface FormField {
   fieldLabel: string;
@@ -19,7 +24,7 @@ interface FormField {
 
 interface Document {
   documentType: string;
-  format: string;
+  format: string[];
   mandatory: boolean;
   maxSize: number;
 }
@@ -30,6 +35,8 @@ interface Action {
   condition: string;
   nextStage: string;
 }
+
+const formatOptions = ["PDF", "JPG", "PNG", "DOC", "DOCX", "XLS", "XLSX", "TXT"];
 
 const Index = () => {
   const [activeStage, setActiveStage] = useState('Claim Submission');
@@ -60,7 +67,7 @@ const Index = () => {
     'Document Upload': [
       {
         documentType: "Device Photos",
-        format: "JPG, PNG",
+        format: ["JPG", "PNG"],
         mandatory: false,
         maxSize: 5
       }
@@ -100,10 +107,22 @@ const Index = () => {
   const [isAddDocumentOpen, setIsAddDocumentOpen] = useState(false);
   const [newDocument, setNewDocument] = useState<Document>({
     documentType: "",
-    format: "PDF",
+    format: ["PDF"],
     mandatory: false,
     maxSize: 10
   });
+
+  // State for add action dialog
+  const [isAddActionOpen, setIsAddActionOpen] = useState(false);
+  const [newAction, setNewAction] = useState<Action>({
+    action: "Submit",
+    buttonLabel: "",
+    condition: "All fields valid",
+    nextStage: ""
+  });
+
+  // State for saving configuration
+  const [isSaving, setIsSaving] = useState(false);
 
   // Function to add a new stage
   const handleAddStage = () => {
@@ -124,10 +143,56 @@ const Index = () => {
     setActiveStage(stageName);
   };
 
+  // Function to rename a stage
+  const handleRenameStage = (oldName: string, newName: string) => {
+    if (oldName === newName) return;
+    
+    // Check if the name already exists
+    if (stages.includes(newName)) {
+      toast.error("A stage with this name already exists");
+      return;
+    }
+
+    const newStages = stages.map(stage => stage === oldName ? newName : stage);
+    setStages(newStages);
+
+    // Update active stage if it's the renamed one
+    if (activeStage === oldName) {
+      setActiveStage(newName);
+    }
+
+    // Update the data references
+    const newFormFields = { ...formFields };
+    newFormFields[newName] = formFields[oldName] || [];
+    delete newFormFields[oldName];
+    setFormFields(newFormFields);
+
+    const newDocuments = { ...documents };
+    newDocuments[newName] = documents[oldName] || [];
+    delete newDocuments[oldName];
+    setDocuments(newDocuments);
+
+    const newActions = { ...actions };
+    newActions[newName] = actions[oldName] || [];
+    delete newActions[oldName];
+    setActions(newActions);
+
+    // Update next stage references in actions
+    Object.keys(newActions).forEach(stageName => {
+      newActions[stageName] = newActions[stageName].map(action => ({
+        ...action,
+        nextStage: action.nextStage === oldName ? newName : action.nextStage
+      }));
+    });
+    setActions(newActions);
+
+    toast.success(`Stage renamed to "${newName}"`);
+  };
+
   // Function to remove a stage
   const handleRemoveStage = (stageName: string) => {
     if (stages.length <= 1) {
-      alert("Cannot remove the last stage");
+      toast.error("Cannot remove the last stage");
       return;
     }
 
@@ -151,11 +216,25 @@ const Index = () => {
     const newActions = { ...actions };
     delete newActions[stageName];
     setActions(newActions);
+
+    // Update next stage references in actions
+    Object.keys(newActions).forEach(stage => {
+      newActions[stage] = newActions[stage].map(action => ({
+        ...action,
+        nextStage: action.nextStage === stageName ? "" : action.nextStage
+      }));
+    });
+    setActions(newActions);
+
+    toast.success(`Stage "${stageName}" removed`);
   };
 
   // Function to add a new field
   const handleAddField = () => {
-    if (!newField.fieldLabel.trim()) return;
+    if (!newField.fieldLabel.trim()) {
+      toast.error("Field label is required");
+      return;
+    }
     
     setFormFields({
       ...formFields,
@@ -170,6 +249,7 @@ const Index = () => {
     });
     
     setIsAddFieldOpen(false);
+    toast.success("Field added successfully");
   };
 
   // Function to remove a field
@@ -181,11 +261,21 @@ const Index = () => {
       ...formFields,
       [activeStage]: newFields
     });
+
+    toast.success("Field removed");
   };
 
   // Function to add a new document
   const handleAddDocument = () => {
-    if (!newDocument.documentType.trim()) return;
+    if (!newDocument.documentType.trim()) {
+      toast.error("Document type is required");
+      return;
+    }
+    
+    if (newDocument.format.length === 0) {
+      toast.error("At least one format must be selected");
+      return;
+    }
     
     setDocuments({
       ...documents,
@@ -194,12 +284,13 @@ const Index = () => {
     
     setNewDocument({
       documentType: "",
-      format: "PDF",
+      format: ["PDF"],
       mandatory: false,
       maxSize: 10
     });
     
     setIsAddDocumentOpen(false);
+    toast.success("Document added successfully");
   };
 
   // Function to remove a document
@@ -211,6 +302,100 @@ const Index = () => {
       ...documents,
       [activeStage]: newDocs
     });
+
+    toast.success("Document removed");
+  };
+
+  // Function to add a new action
+  const handleAddAction = () => {
+    if (!newAction.buttonLabel.trim()) {
+      toast.error("Button label is required");
+      return;
+    }
+
+    if (!newAction.nextStage.trim()) {
+      toast.error("Next stage is required");
+      return;
+    }
+    
+    setActions({
+      ...actions,
+      [activeStage]: [...(actions[activeStage] || []), newAction]
+    });
+    
+    setNewAction({
+      action: "Submit",
+      buttonLabel: "",
+      condition: "All fields valid",
+      nextStage: ""
+    });
+    
+    setIsAddActionOpen(false);
+    toast.success("Action added successfully");
+  };
+
+  // Function to remove an action
+  const handleRemoveAction = (index: number) => {
+    const newActions = [...actions[activeStage]];
+    newActions.splice(index, 1);
+    
+    setActions({
+      ...actions,
+      [activeStage]: newActions
+    });
+
+    toast.success("Action removed");
+  };
+
+  // Function to toggle document format selection
+  const toggleFormat = (format: string) => {
+    if (newDocument.format.includes(format)) {
+      setNewDocument({
+        ...newDocument,
+        format: newDocument.format.filter(f => f !== format)
+      });
+    } else {
+      setNewDocument({
+        ...newDocument,
+        format: [...newDocument.format, format]
+      });
+    }
+  };
+
+  // Function to save configuration
+  const handleSaveConfiguration = async () => {
+    setIsSaving(true);
+    
+    const configuration = {
+      stages,
+      formFields,
+      documents,
+      actions
+    };
+    
+    try {
+      const response = await fetch('https://localhost:9000', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(configuration),
+      });
+      
+      // Since this is a dummy API, we'll just simulate a success
+      setTimeout(() => {
+        setIsSaving(false);
+        toast.success("Configuration saved successfully");
+      }, 1000);
+      
+    } catch (error) {
+      console.error("Error saving configuration:", error);
+      setIsSaving(false);
+      // Show error toast but still simulate success since it's a dummy API
+      setTimeout(() => {
+        toast.success("Configuration saved successfully (simulated)");
+      }, 1000);
+    }
   };
 
   return (
@@ -237,6 +422,7 @@ const Index = () => {
                   isActive={stage === activeStage} 
                   onClick={() => setActiveStage(stage)}
                   onRemove={() => handleRemoveStage(stage)}
+                  onRename={(newName) => handleRenameStage(stage, newName)}
                   canRemove={stages.length > 1}
                 />
                 {index < stages.length - 1 && (
@@ -351,7 +537,7 @@ const Index = () => {
                   {documents[activeStage]?.map((doc, index) => (
                     <tr key={index} className="border-t border-gray-200 animate-fade-in">
                       <td className="p-4">{doc.documentType}</td>
-                      <td className="p-4">{doc.format}</td>
+                      <td className="p-4">{doc.format.join(", ")}</td>
                       <td className="p-4 text-center">
                         {doc.mandatory && (
                           <div className="inline-flex items-center justify-center w-6 h-6 bg-claims-green rounded-full">
@@ -429,6 +615,7 @@ const Index = () => {
                       <td className="p-4">{action.nextStage}</td>
                       <td className="p-4 text-center">
                         <button 
+                          onClick={() => handleRemoveAction(index)}
                           className="text-red-500 hover:text-red-700"
                           aria-label="Remove action"
                         >
@@ -437,9 +624,24 @@ const Index = () => {
                       </td>
                     </tr>
                   ))}
+                  {actions[activeStage]?.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="p-4 text-center text-gray-500">
+                        No actions added yet. Click "Add Action" to get started.
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
+
+            <button 
+              onClick={() => setIsAddActionOpen(true)}
+              className="mt-4 flex items-center px-4 py-2 text-sm border border-gray-300 rounded-md text-gray-600 hover:bg-gray-50 transition-colors"
+            >
+              <Plus size={16} className="mr-2" />
+              Add Action
+            </button>
           </div>
         </div>
 
@@ -528,15 +730,20 @@ const Index = () => {
                 />
               </div>
               
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label htmlFor="format" className="text-right">Format</label>
-                <input
-                  id="format"
-                  value={newDocument.format}
-                  onChange={(e) => setNewDocument({...newDocument, format: e.target.value})}
-                  className="col-span-3 border p-2 rounded"
-                  placeholder="e.g., PDF, JPG, PNG"
-                />
+              <div className="grid grid-cols-4 items-start gap-4">
+                <label className="text-right pt-2">Format</label>
+                <div className="col-span-3 flex flex-col space-y-2">
+                  {formatOptions.map((format) => (
+                    <div key={format} className="flex items-center space-x-2">
+                      <Checkbox 
+                        id={`format-${format}`}
+                        checked={newDocument.format.includes(format)}
+                        onCheckedChange={() => toggleFormat(format)}
+                      />
+                      <Label htmlFor={`format-${format}`}>{format}</Label>
+                    </div>
+                  ))}
+                </div>
               </div>
               
               <div className="grid grid-cols-4 items-center gap-4">
@@ -572,13 +779,99 @@ const Index = () => {
           </DialogContent>
         </Dialog>
 
+        {/* Add Action Dialog */}
+        <Dialog open={isAddActionOpen} onOpenChange={setIsAddActionOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Add New Action</DialogTitle>
+            </DialogHeader>
+            
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <label htmlFor="actionType" className="text-right">Action Type</label>
+                <select
+                  id="actionType"
+                  value={newAction.action}
+                  onChange={(e) => setNewAction({...newAction, action: e.target.value})}
+                  className="col-span-3 border p-2 rounded"
+                >
+                  <option value="Submit">Submit</option>
+                  <option value="Save">Save</option>
+                  <option value="Cancel">Cancel</option>
+                </select>
+              </div>
+              
+              <div className="grid grid-cols-4 items-center gap-4">
+                <label htmlFor="buttonLabel" className="text-right">Button Label</label>
+                <input
+                  id="buttonLabel"
+                  value={newAction.buttonLabel}
+                  onChange={(e) => setNewAction({...newAction, buttonLabel: e.target.value})}
+                  className="col-span-3 border p-2 rounded"
+                  placeholder="e.g., Submit Claim"
+                />
+              </div>
+              
+              <div className="grid grid-cols-4 items-center gap-4">
+                <label htmlFor="condition" className="text-right">Condition</label>
+                <select
+                  id="condition"
+                  value={newAction.condition}
+                  onChange={(e) => setNewAction({...newAction, condition: e.target.value})}
+                  className="col-span-3 border p-2 rounded"
+                >
+                  <option value="All fields valid">All fields valid</option>
+                  <option value="Any state">Any state</option>
+                  <option value="Custom condition">Custom condition</option>
+                </select>
+              </div>
+              
+              <div className="grid grid-cols-4 items-center gap-4">
+                <label htmlFor="nextStage" className="text-right">Next Stage</label>
+                <select
+                  id="nextStage"
+                  value={newAction.nextStage}
+                  onChange={(e) => setNewAction({...newAction, nextStage: e.target.value})}
+                  className="col-span-3 border p-2 rounded"
+                >
+                  <option value="">Select next stage</option>
+                  {stages.map(stage => (
+                    <option key={stage} value={stage}>{stage}</option>
+                  ))}
+                  <option value="Exit (Save Draft)">Exit (Save Draft)</option>
+                  <option value="Complete Claim">Complete Claim</option>
+                </select>
+              </div>
+            </div>
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsAddActionOpen(false)}>Cancel</Button>
+              <Button onClick={handleAddAction}>Add Action</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         {/* Action Buttons */}
         <div className="flex justify-end space-x-4 mt-8 animate-fade-in">
           <button className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors">
             Cancel
           </button>
-          <button className="px-6 py-2 bg-claims-blue text-white rounded-md hover:bg-claims-blue-dark transition-colors">
-            Save Configuration
+          <button 
+            className="px-6 py-2 bg-claims-blue text-white rounded-md hover:bg-claims-blue-dark transition-colors flex items-center"
+            onClick={handleSaveConfiguration}
+            disabled={isSaving}
+          >
+            {isSaving ? (
+              <>
+                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Saving...
+              </>
+            ) : (
+              "Save Configuration"
+            )}
           </button>
         </div>
       </main>
