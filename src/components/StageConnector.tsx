@@ -8,7 +8,7 @@ interface StageConnectorProps {
 
 const StageConnector: React.FC<StageConnectorProps> = ({ isActive = false }) => {
   return (
-    <div className="flex items-center justify-center w-10">
+    <div className="flex items-center justify-center w-10 relative z-0">
       <div 
         className={cn(
           "h-0.5 w-full transition-all duration-300",
