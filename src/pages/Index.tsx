@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { error } from 'console';
 
 interface FormField {
   fieldLabel: string;
@@ -405,31 +406,27 @@ const Index = () => {
       })
     };
     
-    try {
-      const response = await fetch('https://localhost:9000', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(transformedData),
-      });
-      
-      console.log('Configuration sent:', transformedData);
-      
-      // Since this is a dummy API, we'll just simulate a success
-      setTimeout(() => {
-        setIsSaving(false);
+    const response = await fetch('https://localhost:9000', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(transformedData),
+    }).then(
+      (res) => {
+        console.log(res);
         toast.success("Configuration saved successfully");
-      }, 1000);
-      
-    } catch (error) {
-      console.error("Error saving configuration:", error);
-      setIsSaving(false);
-      // Show error toast but still simulate success since it's a dummy API
-      setTimeout(() => {
-        toast.success("Configuration saved successfully (simulated)");
-      }, 1000);
-    }
+      }
+    ).catch(
+      (error) => { 
+        console.log(error);
+        toast.error("Configuration Failed")
+      }
+    ).finally(
+      () => {
+        setIsSaving(false);
+      }
+    );
   };
 
   return (
