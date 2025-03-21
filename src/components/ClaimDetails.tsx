@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
   Card, 
@@ -36,6 +37,14 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -54,7 +63,9 @@ interface ClaimDetailsProps {
     status: string;
     contact?: string;
     currentStage: string;
-    category?: string; // Added the category field
+    category?: string;
+    service?: string;
+    configVersion?: string;
     stageData: {
       [key: string]: any;
     }
@@ -65,23 +76,26 @@ interface ClaimDetailsProps {
 interface ClaimConfig {
   id: number;
   categoryName: string;
-  configuration: {
-    stageName: string;
-    fields?: {
-      name: string;
-      type: string;
-      mandatory: boolean;
-      validation: string;
-    }[];
-    documents?: {
-      name: string;
-      mandatory: string;
-      allowedFormat: string[];
-    }[];
-    actions?: {
-      option: string;
-      stage: string;
-    }[];
+  configuration: StageConfig[];
+}
+
+interface StageConfig {
+  stageName: string;
+  fields?: {
+    name: string;
+    type: string;
+    mandatory: boolean;
+    validation: string;
+    options?: string[] | null;
+  }[];
+  documents?: {
+    name: string;
+    mandatory: string;
+    allowedFormat: string[];
+  }[];
+  actions?: {
+    option: string;
+    stage: string;
   }[];
 }
 
@@ -97,7 +111,9 @@ interface ClaimData {
   currentStage: string;
   customerId?: string;
   productId?: string;
-  category?: string; // Added the category field
+  category?: string;
+  service?: string;
+  configVersion?: string;
   stageData: {
     [key: string]: any;
   }
@@ -135,18 +151,33 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
           setClaimData(claimDataResponse);
         }
         
-        // Extract category from claim data, default to "PE" if not available
+        // Extract values for config API from claim data
         const category = claimDataResponse.category || "PE";
-        console.log("Using category for config fetch:", category);
+        const service = claimDataResponse.service || "default";
+        const configVersion = claimDataResponse.configVersion || "latest";
         
-        // Fetch claim configuration using the category from claim data
-        const configResponse = await fetch(`http://localhost:8081/api/configs/${category}`);
+        console.log(`Fetching config with: category=${category}, service=${service}, configVersion=${configVersion}`);
+        
+        // Fetch claim configuration using the values from claim data
+        const configResponse = await fetch(
+          `http://localhost:8081/api/configs/${category}/${service}/${configVersion}`
+        );
+        
         if (!configResponse.ok) {
-          throw new Error('Failed to fetch claim configuration');
+          // Fallback to category-only endpoint if the full path doesn't work
+          console.log("Full config path failed, trying category-only endpoint");
+          const fallbackResponse = await fetch(`http://localhost:8081/api/configs/${category}`);
+          if (!fallbackResponse.ok) {
+            throw new Error('Failed to fetch claim configuration');
+          }
+          const configData = await fallbackResponse.json();
+          console.log("Config data (fallback):", configData);
+          setClaimConfig(configData);
+        } else {
+          const configData = await configResponse.json();
+          console.log("Config data:", configData);
+          setClaimConfig(configData);
         }
-        const configData = await configResponse.json();
-        console.log("Config data:", configData);
-        setClaimConfig(configData);
         
         // Initialize form values from claim data
         if (claimDataResponse.stageData) {
@@ -230,7 +261,9 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
           status: "New",
           contact: "+1 (555) 123-4567",
           currentStage: "Document Upload",
-          category: "PE", // Add default category
+          category: "PE",
+          service: "default",
+          configVersion: "latest",
           stageData: {
             "Document Upload": {
               dateOfIncident: "2025-03-15"
@@ -425,6 +458,138 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
     }
   };
 
+  // Render field based on field type from configuration
+  const renderField = (field: any, stageName: string, readOnly: boolean) => {
+    const fieldValue = formValues[stageName]?.[field.name] || '';
+    const hasError = !!validationErrors[field.name];
+    
+    switch (field.type.toLowerCase()) {
+      case 'text':
+        return (
+          <Input
+            id={field.name}
+            type="text"
+            value={fieldValue}
+            onChange={(e) => handleFormChange(stageName, field.name, e.target.value)}
+            className={`w-full p-3 border ${hasError ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'} rounded-md`}
+            readOnly={readOnly}
+          />
+        );
+        
+      case 'number':
+        return (
+          <Input
+            id={field.name}
+            type="number"
+            value={fieldValue}
+            onChange={(e) => handleFormChange(stageName, field.name, e.target.value)}
+            className={`w-full p-3 border ${hasError ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'} rounded-md`}
+            readOnly={readOnly}
+          />
+        );
+        
+      case 'date':
+        return (
+          <div className="relative">
+            <Input
+              id={field.name}
+              type="date"
+              value={fieldValue}
+              onChange={(e) => handleFormChange(stageName, field.name, e.target.value)}
+              className={`w-full p-3 border ${hasError ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'} rounded-md`}
+              readOnly={readOnly}
+            />
+            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+              <Calendar className="w-5 h-5 text-gray-400" />
+            </div>
+          </div>
+        );
+        
+      case 'dropdown':
+        return (
+          <Select
+            disabled={readOnly}
+            value={fieldValue || ''}
+            onValueChange={(value) => handleFormChange(stageName, field.name, value)}
+          >
+            <SelectTrigger className={`w-full ${hasError ? 'border-red-500' : ''}`}>
+              <SelectValue placeholder={`Select ${field.name}`} />
+            </SelectTrigger>
+            <SelectContent>
+              {field.options && field.options.map((option: string) => (
+                <SelectItem key={option} value={option}>
+                  {option}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        );
+        
+      case 'radio buttons':
+        return (
+          <div className="space-y-2">
+            {field.options && field.options.map((option: string) => (
+              <div key={option} className="flex items-center">
+                <input
+                  type="radio"
+                  id={`${field.name}-${option}`}
+                  name={field.name}
+                  value={option}
+                  checked={fieldValue === option}
+                  onChange={() => handleFormChange(stageName, field.name, option)}
+                  disabled={readOnly}
+                  className="mr-2"
+                />
+                <label htmlFor={`${field.name}-${option}`}>{option}</label>
+              </div>
+            ))}
+          </div>
+        );
+        
+      case 'checkbox':
+        return (
+          <div className="flex items-center">
+            <Checkbox
+              id={field.name}
+              checked={!!fieldValue}
+              onCheckedChange={(checked) => 
+                handleFormChange(stageName, field.name, !!checked)
+              }
+              disabled={readOnly}
+              className={hasError ? 'border-red-500' : ''}
+            />
+            <label htmlFor={field.name} className="ml-2">
+              {field.name}
+            </label>
+          </div>
+        );
+        
+      case 'textarea':
+        return (
+          <Textarea
+            id={field.name}
+            value={fieldValue}
+            onChange={(e) => handleFormChange(stageName, field.name, e.target.value)}
+            placeholder="Enter details..."
+            className={`w-full p-3 border ${hasError ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'} rounded-md min-h-[120px]`}
+            readOnly={readOnly}
+          />
+        );
+        
+      default:
+        return (
+          <Input
+            id={field.name}
+            type="text"
+            value={fieldValue}
+            onChange={(e) => handleFormChange(stageName, field.name, e.target.value)}
+            className={`w-full p-3 border ${hasError ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'} rounded-md`}
+            readOnly={readOnly}
+          />
+        );
+    }
+  };
+
   if (loading) {
     return <div className="flex justify-center items-center h-96">Loading claim details...</div>;
   }
@@ -554,7 +719,7 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
             </h3>
             
             <ScrollArea className="h-[500px] pr-4">
-              {/* Form Fields Section */}
+              {/* Form Fields Section - Dynamically rendered from configuration */}
               {configurationArray.find(stage => stage.stageName === activeTab)?.fields && (
                 <div className="mb-8">
                   <div className="space-y-6">
@@ -570,53 +735,10 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
                         </div>
                         
                         <div className="relative">
-                          {field.type === 'text' && (
-                            <Input
-                              id={field.name}
-                              type="text"
-                              value={formValues[activeTab]?.[field.name] || ''}
-                              onChange={(e) => handleFormChange(activeTab, field.name, e.target.value)}
-                              className={`w-full p-3 border ${validationErrors[field.name] ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'} rounded-md`}
-                              readOnly={isStageCompleted(activeTab) || isClaimCompleted()}
-                            />
-                          )}
-                          
-                          {field.type === 'date' && (
-                            <div className="relative">
-                              <Input
-                                id={field.name}
-                                type="date"
-                                value={formValues[activeTab]?.[field.name] || ''}
-                                onChange={(e) => handleFormChange(activeTab, field.name, e.target.value)}
-                                className={`w-full p-3 border ${validationErrors[field.name] ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'} rounded-md`}
-                                readOnly={isStageCompleted(activeTab) || isClaimCompleted()}
-                              />
-                              <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                <Calendar className="w-5 h-5 text-gray-400" />
-                              </div>
-                            </div>
-                          )}
-                          
-                          {field.type === 'number' && (
-                            <Input
-                              id={field.name}
-                              type="number"
-                              value={formValues[activeTab]?.[field.name] || ''}
-                              onChange={(e) => handleFormChange(activeTab, field.name, e.target.value)}
-                              className={`w-full p-3 border ${validationErrors[field.name] ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'} rounded-md`}
-                              readOnly={isStageCompleted(activeTab) || isClaimCompleted()}
-                            />
-                          )}
-                          
-                          {field.type === 'textarea' && (
-                            <Textarea
-                              id={field.name}
-                              placeholder="Enter description..."
-                              value={formValues[activeTab]?.[field.name] || ''}
-                              onChange={(e) => handleFormChange(activeTab, field.name, e.target.value)}
-                              className={`w-full p-3 border ${validationErrors[field.name] ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'} rounded-md min-h-[120px]`}
-                              readOnly={isStageCompleted(activeTab) || isClaimCompleted()}
-                            />
+                          {renderField(
+                            field, 
+                            activeTab, 
+                            isStageCompleted(activeTab) || isClaimCompleted()
                           )}
                           
                           {validationErrors[field.name] && (
@@ -632,7 +754,7 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
                 </div>
               )}
               
-              {/* Documents Section */}
+              {/* Documents Section - Dynamically rendered from configuration */}
               {configurationArray.find(stage => stage.stageName === activeTab)?.documents && (
                 <div className="mb-8">
                   <h4 className="text-lg font-medium mb-4 text-blue-700">Required Documents</h4>
