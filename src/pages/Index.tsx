@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ClaimStage from '@/components/ClaimStage';
@@ -951,3 +952,239 @@ const Index = () => {
                                   <X size={18} />
                                 </button>
                               </td>
+                            </tr>
+                          ))}
+                          {actions[activeStage]?.length === 0 && (
+                            <tr>
+                              <td colSpan={3} className="p-4 text-center text-gray-500">
+                                No actions added yet. Click "Add Action" to get started.
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <button 
+                      onClick={() => setIsAddActionOpen(true)}
+                      className="mt-4 flex items-center px-4 py-2 text-sm bg-amber-50 border border-amber-200 rounded-md text-amber-600 hover:bg-amber-100 transition-colors"
+                    >
+                      <Plus size={16} className="mr-2" />
+                      Add Action
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Save Configuration Button */}
+            <div className="flex justify-end mb-10">
+              <Button 
+                onClick={handleSaveConfiguration}
+                className="bg-gradient-to-r from-green-600 to-emerald-700 hover:from-green-700 hover:to-emerald-800 shadow-md text-lg px-8 py-6"
+                disabled={isSaving || stages.length === 0}
+              >
+                {isSaving ? "Saving..." : "Save Configuration"}
+              </Button>
+            </div>
+          </>
+        )}
+      </main>
+
+      {/* Add Field Dialog */}
+      <Dialog open={isAddFieldOpen} onOpenChange={setIsAddFieldOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Form Field</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <div>
+              <Label htmlFor="fieldLabel">Field Label</Label>
+              <Input 
+                id="fieldLabel" 
+                value={newField.fieldLabel}
+                onChange={(e) => setNewField({ ...newField, fieldLabel: e.target.value })}
+                placeholder="Enter field label"
+              />
+            </div>
+            <div>
+              <Label htmlFor="fieldType">Field Type</Label>
+              <Select 
+                value={newField.fieldType} 
+                onValueChange={(value) => setNewField({ 
+                  ...newField, 
+                  fieldType: value,
+                  options: (value === "Dropdown" || value === "Radio Buttons") ? [] : undefined 
+                })}
+              >
+                <SelectTrigger id="fieldType">
+                  <SelectValue placeholder="Select field type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Text">Text</SelectItem>
+                  <SelectItem value="Number">Number</SelectItem>
+                  <SelectItem value="Date">Date</SelectItem>
+                  <SelectItem value="Dropdown">Dropdown</SelectItem>
+                  <SelectItem value="Radio Buttons">Radio Buttons</SelectItem>
+                  <SelectItem value="Checkbox">Checkbox</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Options for Dropdown and Radio Buttons */}
+            {(newField.fieldType === "Dropdown" || newField.fieldType === "Radio Buttons") && (
+              <div className="bg-gray-50 p-4 rounded-md space-y-4">
+                <h4 className="font-medium text-gray-900">Options</h4>
+                
+                {/* Options List */}
+                {newField.options && newField.options.length > 0 ? (
+                  <div className="space-y-2">
+                    {newField.options.map((option, index) => (
+                      <div key={index} className="flex items-center justify-between bg-white p-2 rounded border">
+                        <span>{option}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveOption(index)}
+                          className="text-red-500 hover:text-red-700"
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500">No options added yet.</p>
+                )}
+                
+                {/* Add Option Interface */}
+                <div className="flex gap-2">
+                  <Input
+                    value={optionInput}
+                    onChange={(e) => setOptionInput(e.target.value)}
+                    placeholder="Add new option"
+                    className="flex-1"
+                  />
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={handleAddOption}
+                    disabled={!optionInput.trim()}
+                  >
+                    Add
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="mandatory" 
+                checked={newField.mandatory}
+                onCheckedChange={(checked) => 
+                  setNewField({ ...newField, mandatory: checked === true })}
+              />
+              <Label htmlFor="mandatory">Mandatory Field</Label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddFieldOpen(false)}>Cancel</Button>
+            <Button onClick={handleAddField}>Add Field</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Document Dialog */}
+      <Dialog open={isAddDocumentOpen} onOpenChange={setIsAddDocumentOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Required Document</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <div>
+              <Label htmlFor="documentType">Document Type</Label>
+              <Input 
+                id="documentType" 
+                value={newDocument.documentType}
+                onChange={(e) => setNewDocument({ ...newDocument, documentType: e.target.value })}
+                placeholder="Enter document type"
+              />
+            </div>
+            <div>
+              <Label>Allowed Formats</Label>
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                {formatOptions.map(format => (
+                  <div key={format} className="flex items-center space-x-2">
+                    <Checkbox 
+                      id={`format-${format}`} 
+                      checked={newDocument.format.includes(format)}
+                      onCheckedChange={() => toggleFormat(format)}
+                    />
+                    <Label htmlFor={`format-${format}`}>{format}</Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="docMandatory" 
+                checked={newDocument.mandatory}
+                onCheckedChange={(checked) => 
+                  setNewDocument({ ...newDocument, mandatory: checked === true })}
+              />
+              <Label htmlFor="docMandatory">Mandatory Document</Label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddDocumentOpen(false)}>Cancel</Button>
+            <Button onClick={handleAddDocument}>Add Document</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Action Dialog */}
+      <Dialog open={isAddActionOpen} onOpenChange={setIsAddActionOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Stage Action</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <div>
+              <Label htmlFor="actionName">Action Name</Label>
+              <Input 
+                id="actionName" 
+                value={newAction.action}
+                onChange={(e) => setNewAction({ ...newAction, action: e.target.value })}
+                placeholder="Enter action name"
+              />
+            </div>
+            <div>
+              <Label htmlFor="nextStage">Next Stage (Optional)</Label>
+              <Select 
+                value={newAction.nextStage} 
+                onValueChange={(value) => setNewAction({ ...newAction, nextStage: value })}
+              >
+                <SelectTrigger id="nextStage">
+                  <SelectValue placeholder="Select next stage" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">None</SelectItem>
+                  {getAvailableNextStages().map(stage => (
+                    <SelectItem key={stage} value={stage}>
+                      {stage}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddActionOpen(false)}>Cancel</Button>
+            <Button onClick={handleAddAction}>Add Action</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+export default Index;
