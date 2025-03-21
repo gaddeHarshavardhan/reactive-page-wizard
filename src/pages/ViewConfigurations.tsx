@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -43,6 +42,9 @@ interface Configuration {
   categoryValue?: string;
   serviceValue?: string;
   configuration: Stage[];
+  // Add the display properties
+  categoryDisplay?: string;
+  serviceDisplay?: string;
 }
 
 // Category and service mapping for displaying friendly names
