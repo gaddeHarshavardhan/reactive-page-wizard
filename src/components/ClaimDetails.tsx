@@ -33,8 +33,15 @@ interface ClaimDetailsProps {
   claimId?: string;
   claimData?: {
     claimType: string;
-    customerId: string;
-    productId: string;
+    customerId?: string;
+    productId?: string;
+    srId: string;
+    customerName: string;
+    deviceMake: string;
+    dateCreated: string;
+    status: string;
+    contact: string;
+    currentStage: string;
     stageData: {
       [key: string]: any;
     }
@@ -74,6 +81,8 @@ interface ClaimData {
   status: string;
   contact: string;
   currentStage: string;
+  customerId?: string;
+  productId?: string;
   stageData: {
     [key: string]: any;
   }
