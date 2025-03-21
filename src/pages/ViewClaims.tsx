@@ -4,6 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
 import { toast } from 'sonner';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle 
+} from '@/components/ui/dialog';
+import ClaimDetails from '@/components/ClaimDetails';
 
 interface ClaimResult {
   id: string;
@@ -11,12 +18,26 @@ interface ClaimResult {
   status: string;
   dateSubmitted: string;
   claimType: string;
+  customerId?: string;
+  productId?: string;
+}
+
+interface ClaimDetailsData {
+  claimType: string;
+  customerId: string;
+  productId: string;
+  stageData: {
+    [key: string]: any;
+  }
 }
 
 const ViewClaims = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<ClaimResult[] | null>(null);
+  const [selectedClaim, setSelectedClaim] = useState<string | null>(null);
+  const [claimDetails, setClaimDetails] = useState<ClaimDetailsData | null>(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) {
@@ -26,10 +47,9 @@ const ViewClaims = () => {
 
     setIsSearching(true);
     
-    // Simulate API call with timeout
     try {
       // This simulates a network request
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Mock response data
       const mockResults: ClaimResult[] = searchQuery === "12345" ? [
@@ -38,7 +58,9 @@ const ViewClaims = () => {
           referenceNumber: "12345",
           status: "In Progress",
           dateSubmitted: "2023-09-15",
-          claimType: "Screen Damage"
+          claimType: "Screen Damage",
+          customerId: "CUST123456",
+          productId: "PROD789012"
         }
       ] : [];
 
@@ -50,6 +72,49 @@ const ViewClaims = () => {
     } catch (error) {
       toast.error('Error searching for claims. Please try again.');
       console.error('Search error:', error);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleViewDetails = async (referenceNumber: string) => {
+    try {
+      setIsSearching(true);
+      
+      // Call the API with the reference number
+      const response = await fetch(`http://localhost:8081/api/claims/${referenceNumber}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch claim details');
+      }
+      
+      const data = await response.json();
+      setClaimDetails(data);
+      setSelectedClaim(referenceNumber);
+      setIsDetailsOpen(true);
+    } catch (error) {
+      console.error('Error fetching claim details:', error);
+      toast.error('Failed to load claim details. Please try again.');
+      
+      // For demo purposes, set mock data if API fails
+      if (referenceNumber === '12345') {
+        const mockData = {
+          claimType: "Mobile Protection",
+          customerId: "CUST123456",
+          productId: "PROD789012",
+          stageData: {
+            claim_submission: {
+              device_model: "iPhone 14",
+              issue_type: "Screen Damage",
+              purchase_date: "2023-12-10",
+              description: "Phone screen cracked after accidental drop"
+            }
+          }
+        };
+        setClaimDetails(mockData);
+        setSelectedClaim(referenceNumber);
+        setIsDetailsOpen(true);
+      }
     } finally {
       setIsSearching(false);
     }
@@ -132,7 +197,8 @@ const ViewClaims = () => {
                           <Button 
                             variant="outline" 
                             size="sm"
-                            onClick={() => toast.info(`Viewing details for claim ${claim.referenceNumber}`)}
+                            onClick={() => handleViewDetails(claim.referenceNumber)}
+                            disabled={isSearching}
                           >
                             View Details
                           </Button>
@@ -150,6 +216,19 @@ const ViewClaims = () => {
             )}
           </div>
         )}
+
+        {/* Claim Details Dialog */}
+        <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+          <DialogContent className="max-w-4xl">
+            <DialogHeader>
+              <DialogTitle>Claim Details - Reference #{selectedClaim}</DialogTitle>
+            </DialogHeader>
+            
+            {claimDetails && (
+              <ClaimDetails claimData={claimDetails} />
+            )}
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   );
