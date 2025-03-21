@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ClaimStage from '@/components/ClaimStage';
@@ -13,6 +12,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/com
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { error } from 'console';
@@ -22,6 +22,7 @@ interface FormField {
   fieldType: string;
   mandatory: boolean;
   validation: string;
+  options?: string[]; // Added options for dropdown and radio buttons
 }
 
 interface Document {
@@ -33,8 +34,6 @@ interface Document {
 
 interface Action {
   action: string;
-  buttonLabel: string;
-  condition: string;
   nextStage: string;
 }
 
@@ -52,13 +51,15 @@ const Index = () => {
         fieldLabel: "Device Model",
         fieldType: "Dropdown",
         mandatory: true,
-        validation: "From pre-defined list"
+        validation: "From pre-defined list",
+        options: ["iPhone", "Samsung", "Google Pixel"]
       },
       {
         fieldLabel: "Issue Type",
         fieldType: "Radio Buttons",
         mandatory: true,
-        validation: "One selection required"
+        validation: "One selection required",
+        options: ["Screen Damage", "Water Damage", "Battery Issue"]
       }
     ],
     'Document Upload': [],
@@ -82,15 +83,11 @@ const Index = () => {
     'Claim Submission': [
       {
         action: "Submit",
-        buttonLabel: "Submit Claim",
-        condition: "All fields valid",
         nextStage: "Document Upload"
       },
       {
         action: "Save",
-        buttonLabel: "Save for Later",
-        condition: "Any state",
-        nextStage: "Exit (Save Draft)"
+        nextStage: "Document Upload"
       }
     ],
     'Document Upload': [],
@@ -103,9 +100,13 @@ const Index = () => {
     fieldLabel: "",
     fieldType: "Text",
     mandatory: false,
-    validation: ""
+    validation: "",
+    options: []
   });
 
+  // State for options input
+  const [optionInput, setOptionInput] = useState("");
+  
   // State for add document dialog
   const [isAddDocumentOpen, setIsAddDocumentOpen] = useState(false);
   const [newDocument, setNewDocument] = useState<Document>({
@@ -119,8 +120,6 @@ const Index = () => {
   const [isAddActionOpen, setIsAddActionOpen] = useState(false);
   const [newAction, setNewAction] = useState<Action>({
     action: "Submit",
-    buttonLabel: "",
-    condition: "All fields valid",
     nextStage: ""
   });
 
@@ -239,20 +238,53 @@ const Index = () => {
       return;
     }
     
+    // Create field with options if it's a dropdown or radio button
+    const fieldToAdd = { ...newField };
+    if ((fieldToAdd.fieldType === "Dropdown" || fieldToAdd.fieldType === "Radio Buttons") && 
+        (!fieldToAdd.options || fieldToAdd.options.length === 0)) {
+      toast.error(`Please add at least one option for the ${fieldToAdd.fieldType}`);
+      return;
+    }
+    
     setFormFields({
       ...formFields,
-      [activeStage]: [...(formFields[activeStage] || []), newField]
+      [activeStage]: [...(formFields[activeStage] || []), fieldToAdd]
     });
     
     setNewField({
       fieldLabel: "",
       fieldType: "Text",
       mandatory: false,
-      validation: ""
+      validation: "",
+      options: []
     });
     
+    setOptionInput("");
     setIsAddFieldOpen(false);
     toast.success("Field added successfully");
+  };
+
+  // Function to add an option to dropdown or radio buttons
+  const handleAddOption = () => {
+    if (!optionInput.trim()) {
+      toast.error("Option cannot be empty");
+      return;
+    }
+    
+    setNewField(prev => ({
+      ...prev,
+      options: [...(prev.options || []), optionInput.trim()]
+    }));
+    
+    setOptionInput("");
+  };
+  
+  // Function to remove an option
+  const handleRemoveOption = (index: number) => {
+    setNewField(prev => ({
+      ...prev,
+      options: (prev.options || []).filter((_, i) => i !== index)
+    }));
   };
 
   // Function to remove a field
@@ -311,11 +343,6 @@ const Index = () => {
 
   // Function to add a new action
   const handleAddAction = () => {
-    if (!newAction.buttonLabel.trim()) {
-      toast.error("Button label is required");
-      return;
-    }
-
     if (!newAction.nextStage.trim()) {
       toast.error("Next stage is required");
       return;
@@ -328,8 +355,6 @@ const Index = () => {
     
     setNewAction({
       action: "Submit",
-      buttonLabel: "",
-      condition: "All fields valid",
       nextStage: ""
     });
     
@@ -378,7 +403,8 @@ const Index = () => {
             name: field.fieldLabel,
             type: field.fieldType.toLowerCase(),
             mandatory: field.mandatory,
-            validation: field.validation
+            validation: field.validation,
+            options: field.options // Include options for dropdowns and radio buttons
           })) || [],
           documents: documents[stageName]?.map(doc => ({
             name: doc.documentType,
@@ -386,35 +412,20 @@ const Index = () => {
             maxSize: doc.maxSize,
             allowedFormat: doc.format
           })) || [],
-          actions: actions[stageName]?.map(action => {
-            const actionData: {
-              option: string;
-              stage?: string;
-              buttonLabel?: string;
-              condition?: string;
-            } = {
-              option: action.action.toLowerCase(),
-              buttonLabel: action.buttonLabel,
-              condition: action.condition
-            };
-            
-            // Only include stage if it's specified and not an exit action
-            if (action.nextStage && !action.nextStage.startsWith("Exit")) {
-              actionData.stage = action.nextStage;
-            }
-            
-            return actionData;
-          }) || []
+          actions: actions[stageName]?.map(action => ({
+            option: action.action.toLowerCase(),
+            stage: action.nextStage
+          })) || []
         };
       })
     };
     
     try {
-      // In a real app, this would save to an API
       console.log('Configuration for preview:', transformedData);
       
       // Store in localStorage to simulate persistence
       localStorage.setItem('claimConfig', JSON.stringify(transformedData));
+      localStorage.setItem('previewMode', 'true'); // Add flag for preview mode
       
       setIsSaving(false);
       toast.success("Configuration saved and ready for preview");
@@ -444,7 +455,8 @@ const Index = () => {
             name: field.fieldLabel,
             type: field.fieldType.toLowerCase(),
             mandatory: field.mandatory,
-            validation: field.validation
+            validation: field.validation,
+            options: field.options
           })) || [],
           documents: documents[stageName]?.map(doc => ({
             name: doc.documentType,
@@ -460,14 +472,9 @@ const Index = () => {
               condition?: string;
             } = {
               option: action.action.toLowerCase(),
-              buttonLabel: action.buttonLabel,
-              condition: action.condition
             };
             
-            // Only include stage if it's specified and not an exit action
-            if (action.nextStage && !action.nextStage.startsWith("Exit")) {
-              actionData.stage = action.nextStage;
-            }
+            actionData.stage = action.nextStage;
             
             return actionData;
           }) || []
@@ -496,6 +503,12 @@ const Index = () => {
         setIsSaving(false);
       }
     );
+  };
+
+  // Get available next stages (only stages after the current one)
+  const getAvailableNextStages = () => {
+    const currentIndex = stages.indexOf(activeStage);
+    return stages.filter((_, index) => index > currentIndex);
   };
 
   return (
@@ -556,7 +569,7 @@ const Index = () => {
                     <th className="w-1/4 rounded-tl-md">Field Label</th>
                     <th className="w-1/4">Field Type</th>
                     <th className="w-1/6 text-center">Mandatory</th>
-                    <th className="w-1/4">Validation</th>
+                    <th className="w-1/4">Validation/Options</th>
                     <th className="w-1/12 rounded-tr-md">Actions</th>
                   </tr>
                 </thead>
@@ -585,7 +598,15 @@ const Index = () => {
                           </div>
                         )}
                       </td>
-                      <td className="p-4">{field.validation}</td>
+                      <td className="p-4">
+                        {(field.fieldType === "Dropdown" || field.fieldType === "Radio Buttons") ? (
+                          <div>
+                            <span className="font-medium">Options:</span> {field.options?.join(", ")}
+                          </div>
+                        ) : (
+                          field.validation
+                        )}
+                      </td>
                       <td className="p-4 text-center">
                         <button 
                           onClick={() => handleRemoveField(index)}
@@ -621,7 +642,7 @@ const Index = () => {
         {/* Documents Section */}
         <div className="bg-white rounded-lg border border-gray-200 mb-6 animate-fade-in-up">
           <div className="p-6">
-            <h3 className="text-xl font-medium mb-4">Documents</h3>
+            <h3 className="text-xl font-medium mb-4">Required Documents</h3>
             <div className="overflow-x-auto">
               <table className="w-full claims-table">
                 <thead>
@@ -699,19 +720,15 @@ const Index = () => {
               <table className="w-full claims-table">
                 <thead>
                   <tr>
-                    <th className="w-1/5 rounded-tl-md">Action</th>
-                    <th className="w-1/5">Button Label</th>
-                    <th className="w-1/3">Condition</th>
-                    <th className="w-1/4">Next Stage</th>
-                    <th className="w-1/12 rounded-tr-md">Actions</th>
+                    <th className="w-1/3 rounded-tl-md">Action</th>
+                    <th className="w-1/2">Next Stage</th>
+                    <th className="w-1/6 rounded-tr-md">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {actions[activeStage]?.map((action, index) => (
                     <tr key={index} className="border-t border-gray-200 animate-fade-in">
                       <td className="p-4">{action.action}</td>
-                      <td className="p-4">{action.buttonLabel}</td>
-                      <td className="p-4">{action.condition}</td>
                       <td className="p-4">{action.nextStage}</td>
                       <td className="p-4 text-center">
                         <button 
@@ -726,7 +743,7 @@ const Index = () => {
                   ))}
                   {actions[activeStage]?.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="p-4 text-center text-gray-500">
+                      <td colSpan={3} className="p-4 text-center text-gray-500">
                         No actions added yet. Click "Add Action" to get started.
                       </td>
                     </tr>
@@ -768,7 +785,14 @@ const Index = () => {
                 <select
                   id="fieldType"
                   value={newField.fieldType}
-                  onChange={(e) => setNewField({...newField, fieldType: e.target.value})}
+                  onChange={(e) => setNewField({
+                    ...newField, 
+                    fieldType: e.target.value,
+                    // Reset options if changing away from dropdown/radio
+                    options: e.target.value === "Dropdown" || e.target.value === "Radio Buttons" 
+                      ? (newField.options || []) 
+                      : undefined
+                  })}
                   className="col-span-3 border p-2 rounded"
                 >
                   <option value="Text">Text</option>
@@ -780,16 +804,63 @@ const Index = () => {
                 </select>
               </div>
               
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label htmlFor="validation" className="text-right">Validation</label>
-                <input
-                  id="validation"
-                  value={newField.validation}
-                  onChange={(e) => setNewField({...newField, validation: e.target.value})}
-                  className="col-span-3 border p-2 rounded"
-                  placeholder="e.g., Required, Min length: 5"
-                />
-              </div>
+              {/* Options section for dropdown and radio buttons */}
+              {(newField.fieldType === "Dropdown" || newField.fieldType === "Radio Buttons") && (
+                <div className="grid grid-cols-4 items-start gap-4">
+                  <label className="text-right pt-2">Options</label>
+                  <div className="col-span-3 space-y-2">
+                    <div className="flex space-x-2">
+                      <Input
+                        value={optionInput}
+                        onChange={(e) => setOptionInput(e.target.value)}
+                        placeholder="Enter option value"
+                        className="flex-1"
+                      />
+                      <Button 
+                        type="button" 
+                        onClick={handleAddOption}
+                        variant="outline"
+                      >
+                        Add
+                      </Button>
+                    </div>
+                    
+                    {/* Display added options */}
+                    {newField.options && newField.options.length > 0 && (
+                      <div className="border rounded-md p-2 mt-2">
+                        <p className="text-sm text-gray-500 mb-2">Added options:</p>
+                        <div className="space-y-1">
+                          {newField.options.map((option, index) => (
+                            <div key={index} className="flex justify-between items-center py-1 px-2 bg-gray-50 rounded">
+                              <span>{option}</span>
+                              <button 
+                                type="button" 
+                                onClick={() => handleRemoveOption(index)}
+                                className="text-red-500 hover:text-red-700"
+                              >
+                                <X size={16} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              
+              {newField.fieldType !== "Dropdown" && newField.fieldType !== "Radio Buttons" && (
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <label htmlFor="validation" className="text-right">Validation</label>
+                  <input
+                    id="validation"
+                    value={newField.validation}
+                    onChange={(e) => setNewField({...newField, validation: e.target.value})}
+                    className="col-span-3 border p-2 rounded"
+                    placeholder="e.g., Required, Min length: 5"
+                  />
+                </div>
+              )}
               
               <div className="grid grid-cols-4 items-center gap-4">
                 <div className="text-right">Mandatory</div>
@@ -879,121 +950,6 @@ const Index = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Add Action Dialog */}
+        {/* Add Action Dialog - Simplified */}
         <Dialog open={isAddActionOpen} onOpenChange={setIsAddActionOpen}>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Add New Action</DialogTitle>
-            </DialogHeader>
-            
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label htmlFor="actionType" className="text-right">Action Type</label>
-                <select
-                  id="actionType"
-                  value={newAction.action}
-                  onChange={(e) => setNewAction({...newAction, action: e.target.value})}
-                  className="col-span-3 border p-2 rounded"
-                >
-                  <option value="Submit">Submit</option>
-                  <option value="Save">Save</option>
-                  <option value="Cancel">Cancel</option>
-                </select>
-              </div>
-              
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label htmlFor="buttonLabel" className="text-right">Button Label</label>
-                <input
-                  id="buttonLabel"
-                  value={newAction.buttonLabel}
-                  onChange={(e) => setNewAction({...newAction, buttonLabel: e.target.value})}
-                  className="col-span-3 border p-2 rounded"
-                  placeholder="e.g., Submit Claim"
-                />
-              </div>
-              
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label htmlFor="condition" className="text-right">Condition</label>
-                <select
-                  id="condition"
-                  value={newAction.condition}
-                  onChange={(e) => setNewAction({...newAction, condition: e.target.value})}
-                  className="col-span-3 border p-2 rounded"
-                >
-                  <option value="All fields valid">All fields valid</option>
-                  <option value="Any state">Any state</option>
-                  <option value="Custom condition">Custom condition</option>
-                </select>
-              </div>
-              
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label htmlFor="nextStage" className="text-right">Next Stage</label>
-                <select
-                  id="nextStage"
-                  value={newAction.nextStage}
-                  onChange={(e) => setNewAction({...newAction, nextStage: e.target.value})}
-                  className="col-span-3 border p-2 rounded"
-                >
-                  <option value="">Select next stage</option>
-                  {stages.map(stage => (
-                    <option key={stage} value={stage}>{stage}</option>
-                  ))}
-                  <option value="Exit (Save Draft)">Exit (Save Draft)</option>
-                  <option value="Complete Claim">Complete Claim</option>
-                </select>
-              </div>
-            </div>
-            
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsAddActionOpen(false)}>Cancel</Button>
-              <Button onClick={handleAddAction}>Add Action</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Action Buttons */}
-        <div className="flex justify-end space-x-4 mt-8 animate-fade-in">
-          <button className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors">
-            Cancel
-          </button>
-          <button 
-            className="px-6 py-2 bg-claims-blue text-white rounded-md hover:bg-claims-blue-dark transition-colors flex items-center"
-            onClick={handleSaveConfiguration}
-            disabled={isSaving}
-          >
-            {isSaving ? (
-              <>
-                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Saving...
-              </>
-            ) : (
-              "Save Configuration"
-            )}
-          </button>
-          <button 
-            className="px-6 py-2 bg-claims-green text-white rounded-md hover:bg-green-600 transition-colors flex items-center"
-            onClick={handleSaveAndPreview}
-            disabled={isSaving}
-          >
-            {isSaving ? (
-              <>
-                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Processing...
-              </>
-            ) : (
-              "Save & Preview Form"
-            )}
-          </button>
-        </div>
-      </main>
-    </div>
-  );
-};
-
-export default Index;
+          <DialogContent className="sm:max-w-[425px
