@@ -105,7 +105,7 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
       setLoading(true);
       try {
         // Fetch claim configuration
-        const configResponse = await fetch('http://localhost:8081/api/configs');
+        const configResponse = await fetch('http://localhost:8081/api/configs/PE');
         if (!configResponse.ok) {
           throw new Error('Failed to fetch claim configuration');
         }
