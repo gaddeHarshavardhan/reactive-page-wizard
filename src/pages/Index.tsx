@@ -37,112 +37,102 @@ interface Action {
 }
 
 // Default template data for quick start
-const defaultStages = ["Claim Submission", "Documentation", "Review"];
+const defaultStages = ["Verification", "Claim Assessment", "IC Decision"];
 
 const defaultFormFields: Record<string, FormField[]> = {
-  "Claim Submission": [
-    {
-      fieldLabel: "Full Name",
-      fieldType: "Text",
-      mandatory: true
-    },
-    {
-      fieldLabel: "Email",
-      fieldType: "Text",
-      mandatory: true
-    },
-    {
-      fieldLabel: "Phone Number",
-      fieldType: "Text",
-      mandatory: true
-    },
+  "Verification": [
     {
       fieldLabel: "Incident Date",
       fieldType: "Date",
       mandatory: true
     },
     {
-      fieldLabel: "Claim Type",
-      fieldType: "Dropdown",
-      mandatory: true,
-      options: ["Damage", "Theft", "Loss", "Malfunction"]
+      fieldLabel: "Under Warranty",
+      fieldType: "Radio Buttons",
+      options: ["Yes","No"],
+      mandatory: true
     }
   ],
-  "Documentation": [
+  "Claim Assessment": [
     {
-      fieldLabel: "Incident Description",
-      fieldType: "Text",
+      fieldLabel: "Estimated Date",
+      fieldType: "Date",
       mandatory: true
     },
     {
-      fieldLabel: "Estimated Value",
+      fieldLabel: "Damage  Type",
+      fieldType: "Dropdown",
+      mandatory: true,
+      options: ["Accidental", "Out of Warranty", "Physical", "Other"]
+    },
+    {
+      fieldLabel: "Estimation Amount",
       fieldType: "Number",
       mandatory: true
     }
   ],
-  "Review": [
+  "IC Decision": [
     {
-      fieldLabel: "Additional Comments",
-      fieldType: "Text",
-      mandatory: false
-    },
-    {
-      fieldLabel: "Terms Acceptance",
-      fieldType: "Checkbox",
-      mandatory: true
+      fieldLabel: "Insurance Decision",
+      fieldType: "Dropdown",
+      mandatory: true,
+      options: ["Approved", "BER", "Rejected"]
     }
   ]
 };
 
 const defaultDocuments: Record<string, Document[]> = {
-  "Claim Submission": [],
-  "Documentation": [
+  "Verification": [
     {
-      documentType: "Proof of Purchase",
-      format: ["PDF", "JPG"],
+      documentType: "Claim Form",
+      format: ["PDF"],
       mandatory: true
     },
     {
-      documentType: "Damage Photos",
-      format: ["JPG", "PNG"],
+      documentType: "Purchase Invoice",
+      format: ["JPG", "PNG", "PDF"],
       mandatory: true
+    },
+    {
+      documentType: "Government ID Proof",
+      format: ["JPG", "PNG", "PDF"],
+      mandatory: true
+    },
+    {
+      documentType: "Additional Document",
+      format: ["JPG", "PNG"],
+      mandatory: false
     }
   ],
-  "Review": [
+  "Claim Assessment": [
     {
-      documentType: "ID Verification",
-      format: ["PDF"],
+      documentType: "Estimate Document",
+      format: ["PDF", "JPG","PNG"],
       mandatory: true
+    },
+    {
+      documentType: "Device Damages",
+      format: ["JPG", "PNG"],
+      mandatory: false
     }
-  ]
+  ],
+  "IC Decision": []
 };
 
 const defaultActions: Record<string, Action[]> = {
-  "Claim Submission": [
-    {
-      action: "Next",
-      nextStage: "Documentation"
-    }
-  ],
-  "Documentation": [
-    {
-      action: "Previous",
-      nextStage: "Claim Submission"
-    },
-    {
-      action: "Next",
-      nextStage: "Review"
-    }
-  ],
-  "Review": [
-    {
-      action: "Previous",
-      nextStage: "Documentation"
-    },
+  "Verification": [
     {
       action: "Submit",
-      nextStage: ""
+      nextStage: "Claim Assessment"
     }
+  ],
+  "Claim Assessment": [
+    {
+      action: "Submit",
+      nextStage: "IC Decision"
+    }
+  ],
+  "IC Decision": [
   ]
 };
 
@@ -152,7 +142,8 @@ const formatOptions = ["PDF", "JPG", "PNG", "TXT"];
 const categoryOptions = [
   { display: "Personal Electronics", value: "PE" },
   { display: "Home Appliances", value: "HA" },
-  { display: "Motor", value: "Motor" }
+  { display: "Motor", value: "Motor" },
+  {display: "Furniture", value: "Furniture"}
 ];
 
 // Updated service options with full display text and values
@@ -166,7 +157,10 @@ const serviceOptionsMap: Record<string, { display: string; value: string }[]> = 
     { display: "Preventive Maintenance", value: "PMS" }
   ],
   "Motor": [
-    { display: "Accidental Damage", value: "ADLD" }
+    { display: "Extended Warranty", value: "EW" }
+  ],
+  "Furniture": [
+    {display: "Accidental Damage", value: "AD"}
   ]
 };
 
