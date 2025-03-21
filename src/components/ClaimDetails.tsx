@@ -253,7 +253,12 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
 
   // Get a stage's completion status based on timeline progression
   const isStageCompleted = (stageName: string): boolean => {
-    if (!claimData || !claimData.currentStage) return false;
+    if (!claimData) return false;
+    
+    // If claim is completed, all stages should be marked as completed
+    if (isClaimCompleted()) return true;
+    
+    // Otherwise, only mark previous stages as completed
     const currentStageIndex = getCurrentStageIndex();
     const stageIndex = getStageIndex(stageName);
     return stageIndex < currentStageIndex;
@@ -432,7 +437,7 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
         </div>
       </div>
       
-      {/* Claim Progress Timeline - Updated to be clickable for completed stages */}
+      {/* Claim Progress Timeline - Updated to handle completed status */}
       <div className="flex justify-center items-center py-8">
         {configurationArray.length > 0 ? (
           configurationArray.map((stage, index) => (
@@ -446,13 +451,13 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
                 onClick={() => handleStageSelect(stage.stageName)}
               >
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                  index < currentStageIndex 
+                  isClaimCompleted() || index < currentStageIndex
                     ? 'bg-green-500 text-white' 
                     : index === currentStageIndex 
                       ? 'bg-blue-500 text-white' 
                       : 'bg-gray-200 text-gray-500'
                 }`}>
-                  {index < currentStageIndex ? (
+                  {isClaimCompleted() || index < currentStageIndex ? (
                     <Check className="h-5 w-5" />
                   ) : (
                     index + 1
@@ -467,7 +472,9 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
               
               {index < configurationArray.length - 1 && (
                 <div className={`h-[2px] w-24 mx-2 ${
-                  index < currentStageIndex ? 'bg-blue-500' : 'bg-gray-300'
+                  isClaimCompleted() || index < currentStageIndex 
+                    ? 'bg-green-500' 
+                    : 'bg-gray-300'
                 }`} />
               )}
             </React.Fragment>
