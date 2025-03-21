@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -267,13 +266,13 @@ const ViewClaims = () => {
             <DialogHeader>
               <DialogTitle>Claim Details - Reference #{selectedClaim}</DialogTitle>
             </DialogHeader>
-            
-            {claimDetails && (
-              <ClaimDetails claimData={claimDetails} />
-            )}
-          </DialogContent>
-        </Dialog>
-      </main>
+          
+          {claimDetails && (
+            <ClaimDetails claimData={claimDetails} />
+          )}
+        </DialogContent>
+      </Dialog>
+    </main>
     </div>
   );
 };

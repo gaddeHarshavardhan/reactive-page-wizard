@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   Card, 
@@ -31,7 +30,7 @@ import { toast } from 'sonner';
 
 interface ClaimDetailsProps {
   claimId?: string;
-  initialClaimData?: {
+  claimData?: {
     claimType: string;
     customerId: string;
     productId: string;
@@ -77,7 +76,7 @@ interface ClaimData {
   }
 }
 
-const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", initialClaimData }) => {
+const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", claimData: initialClaimData }) => {
   const [claimConfig, setClaimConfig] = useState<ClaimConfig | null>(null);
   const [claimData, setClaimData] = useState<ClaimData | null>(null);
   const [loading, setLoading] = useState(true);
