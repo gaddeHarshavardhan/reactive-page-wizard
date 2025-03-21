@@ -384,7 +384,7 @@ const Index = () => {
       localStorage.setItem('previewMode', 'true'); // Add flag for preview mode
       
       // Also call the save configuration API endpoint like in handleSaveConfiguration
-      const response = await fetch('https://localhost:8081/api/configs', {
+      const response = await fetch('http://localhost:8081/api/configs', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -462,7 +462,7 @@ const Index = () => {
       })
     };
     
-    const response = await fetch('https://localhost:8081/api/configs', {
+    const response = await fetch('http://localhost:8081/api/configs', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
