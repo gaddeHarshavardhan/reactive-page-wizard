@@ -48,56 +48,39 @@ const ViewClaims = () => {
     setIsSearching(true);
     
     try {
-      // This simulates a network request
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Call the API to get claim details
+      const response = await fetch(`http://localhost:8081/api/claims/${searchQuery}`);
       
-      // Mock response data
-      const mockResults: ClaimResult[] = searchQuery === "12345" ? [
-        {
-          id: "1",
-          referenceNumber: "12345",
-          status: "In Progress",
-          dateSubmitted: "2023-09-15",
-          claimType: "Screen Damage",
-          customerId: "CUST123456",
-          productId: "PROD789012"
-        }
-      ] : [];
+      if (!response.ok) {
+        throw new Error(`Failed to fetch claim with reference number ${searchQuery}`);
+      }
+      
+      const claimData = await response.json();
+      
+      // Create search result from API response
+      const mockResults: ClaimResult[] = [{
+        id: "1",
+        referenceNumber: searchQuery,
+        status: "In Progress",
+        dateSubmitted: new Date().toISOString().split('T')[0],
+        claimType: claimData.claimType,
+        customerId: claimData.customerId,
+        productId: claimData.productId
+      }];
 
       setSearchResults(mockResults);
+      setClaimDetails(claimData); // Store the claim details
       
       if (mockResults.length === 0) {
         toast.info('No claims found with that reference number');
       }
     } catch (error) {
-      toast.error('Error searching for claims. Please try again.');
       console.error('Search error:', error);
-    } finally {
-      setIsSearching(false);
-    }
-  };
-
-  const handleViewDetails = async (referenceNumber: string) => {
-    try {
-      setIsSearching(true);
+      toast.error('Error searching for claims. Please try again.');
       
-      // Call the API with the reference number
-      const response = await fetch(`http://localhost:8081/api/claims/${referenceNumber}`);
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch claim details');
-      }
-      
-      const data = await response.json();
-      setClaimDetails(data);
-      setSelectedClaim(referenceNumber);
-      setIsDetailsOpen(true);
-    } catch (error) {
-      console.error('Error fetching claim details:', error);
-      toast.error('Failed to load claim details. Please try again.');
-      
-      // For demo purposes, set mock data if API fails
-      if (referenceNumber === '12345') {
+      // Fallback for testing
+      if (searchQuery === "12345") {
+        // Mock data for testing only
         const mockData = {
           claimType: "Mobile Protection",
           customerId: "CUST123456",
@@ -111,12 +94,73 @@ const ViewClaims = () => {
             }
           }
         };
+        
+        const mockResults: ClaimResult[] = [{
+          id: "1",
+          referenceNumber: searchQuery,
+          status: "In Progress",
+          dateSubmitted: "2023-09-15",
+          claimType: mockData.claimType,
+          customerId: mockData.customerId,
+          productId: mockData.productId
+        }];
+        
+        setSearchResults(mockResults);
         setClaimDetails(mockData);
-        setSelectedClaim(referenceNumber);
-        setIsDetailsOpen(true);
+      } else {
+        setSearchResults([]);
       }
     } finally {
       setIsSearching(false);
+    }
+  };
+
+  const handleViewDetails = async (referenceNumber: string) => {
+    // Since we already have the claim details from the search, we can just display them
+    if (claimDetails) {
+      setSelectedClaim(referenceNumber);
+      setIsDetailsOpen(true);
+    } else {
+      try {
+        setIsSearching(true);
+        
+        // Call the API with the reference number
+        const response = await fetch(`http://localhost:8081/api/claims/${referenceNumber}`);
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch claim details');
+        }
+        
+        const data = await response.json();
+        setClaimDetails(data);
+        setSelectedClaim(referenceNumber);
+        setIsDetailsOpen(true);
+      } catch (error) {
+        console.error('Error fetching claim details:', error);
+        toast.error('Failed to load claim details. Please try again.');
+        
+        // For demo purposes, set mock data if API fails
+        if (referenceNumber === '12345') {
+          const mockData = {
+            claimType: "Mobile Protection",
+            customerId: "CUST123456",
+            productId: "PROD789012",
+            stageData: {
+              claim_submission: {
+                device_model: "iPhone 14",
+                issue_type: "Screen Damage",
+                purchase_date: "2023-12-10",
+                description: "Phone screen cracked after accidental drop"
+              }
+            }
+          };
+          setClaimDetails(mockData);
+          setSelectedClaim(referenceNumber);
+          setIsDetailsOpen(true);
+        }
+      } finally {
+        setIsSearching(false);
+      }
     }
   };
 

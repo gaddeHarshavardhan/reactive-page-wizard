@@ -47,7 +47,10 @@ const formatStageKey = (key: string): string => {
 
 const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimData }) => {
   const stages = Object.keys(claimData.stageData);
-  const currentStageIndex = 0; // In a real app, you'd determine this based on status
+  
+  // Determine the current stage based on the available data
+  // For this example, we'll assume the last stage with data is the current one
+  const currentStageIndex = stages.length - 1;
 
   return (
     <div className="space-y-6">
