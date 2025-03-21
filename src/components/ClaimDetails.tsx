@@ -243,6 +243,14 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
     fetchData();
   }, [claimId, initialClaimData]);
 
+  // Update activeTab when claimData changes, especially after submission
+  useEffect(() => {
+    if (claimData && claimData.currentStage) {
+      console.log("Setting active tab to current stage:", claimData.currentStage);
+      setActiveTab(claimData.currentStage);
+    }
+  }, [claimData]);
+
   const getStageIndex = (stageName: string): number => {
     if (!claimConfig || !claimConfig.configuration) return -1;
     return claimConfig.configuration.findIndex(stage => stage.stageName === stageName);
@@ -318,7 +326,16 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
       }
       
       const updatedData = await response.json();
+      console.log("Updated claim data after submission:", updatedData);
+      
+      // Update the local state with the new data from the API
       setClaimData(updatedData);
+      
+      // Explicitly set the active tab to the new current stage
+      if (updatedData.currentStage) {
+        setActiveTab(updatedData.currentStage);
+      }
+      
       toast.success('Claim submitted successfully');
     } catch (error) {
       console.error('Error submitting claim:', error);
