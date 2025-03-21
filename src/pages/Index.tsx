@@ -310,7 +310,24 @@ const Index = () => {
         editConfig.stages.forEach((stage: any) => {
           configFormFields[stage.stageName] = stage.fields || [];
           configDocuments[stage.stageName] = stage.documents || [];
-          configActions[stage.stageName] = stage.actions || [];
+          
+          // Map actions with conditions
+          configActions[stage.stageName] = stage.actions.map((action: any) => {
+            const mappedAction: Action = {
+              action: action.action,
+              nextStage: action.nextStage
+            };
+            
+            // Add condition if it exists
+            if (action.condition) {
+              mappedAction.condition = {
+                field: action.condition.field,
+                value: action.condition.value
+              };
+            }
+            
+            return mappedAction;
+          }) || [];
         });
         
         setFormFields(configFormFields);
@@ -324,10 +341,10 @@ const Index = () => {
         // Clear localStorage after loading
         localStorage.removeItem('editConfig');
         
-        toast.success('Configuration loaded for editing');
+        toast.success('Configuration loaded for editing', { duration: 3000 });
       } catch (error) {
         console.error('Error loading edit configuration:', error);
-        toast.error('Failed to load configuration for editing');
+        toast.error('Failed to load configuration for editing', { duration: 3000 });
       }
     }
   }, []);

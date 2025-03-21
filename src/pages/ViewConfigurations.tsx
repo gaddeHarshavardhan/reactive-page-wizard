@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -126,8 +125,9 @@ const ViewConfigurations = () => {
     setOpenDialog(true);
   };
   
+  // Function to handle editing a configuration
   const handleEditConfig = (config: Configuration) => {
-    // Fixed: Prepare the configuration structure that the editor expects
+    // Prepare the configuration structure that the editor expects
     const configToEdit = {
       id: config.id,
       category: config.categoryName,
@@ -145,18 +145,34 @@ const ViewConfigurations = () => {
           format: doc.allowedFormat,
           mandatory: doc.mandatory === "true"
         })),
-        actions: stage.actions.map(action => ({
-          action: capitalizeFirstLetter(action.option),
-          nextStage: action.stage || "",
-          conditions: action.conditions || []
-        }))
+        actions: stage.actions.map(action => {
+          // Create base action object
+          const actionObj = {
+            action: capitalizeFirstLetter(action.option),
+            nextStage: action.stage || "",
+          };
+          
+          // Add condition if it exists
+          if (action.conditions && action.conditions.length > 0) {
+            const condition = action.conditions[0]; // Take the first condition
+            return {
+              ...actionObj,
+              condition: {
+                field: condition.field,
+                value: condition.value
+              }
+            };
+          }
+          
+          return actionObj;
+        })
       }))
     };
     
     // Store the configuration in localStorage to be loaded by the editor
     localStorage.setItem('editConfig', JSON.stringify(configToEdit));
     navigate('/config');
-    toast.success('Configuration loaded for editing');
+    toast.success('Configuration loaded for editing', { duration: 3000 });
   };
 
   // Helper function to capitalize first letter
