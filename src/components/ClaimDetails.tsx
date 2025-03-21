@@ -24,7 +24,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { CircleCheck, Circle, Clock, Check, ArrowRight, Calendar, Upload } from 'lucide-react';
+import { CircleCheck, Circle, Clock, Check, ArrowRight, Calendar, Upload, Save } from 'lucide-react';
 import FormFieldRow from './FormFieldRow';
 import DocumentRow from './DocumentRow';
 import { toast } from 'sonner';
@@ -97,6 +97,8 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
   const [activeTab, setActiveTab] = useState<string>("");
   const [formValues, setFormValues] = useState<{[key: string]: any}>({});
   const [selectedIssueType, setSelectedIssueType] = useState<string>("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -266,12 +268,64 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
     handleFormChange(activeTab, 'issue_type', value);
   };
 
-  const handleSaveForLater = () => {
-    toast.success('Claim progress saved');
+  const handleSaveForLater = async () => {
+    if (!claimData) return;
+    
+    setIsSaving(true);
+    try {
+      const response = await fetch(`http://localhost:8081/api/claims/${claimData.srId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...claimData,
+          stageData: formValues
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to save claim data');
+      }
+      
+      toast.success('Claim progress saved successfully');
+    } catch (error) {
+      console.error('Error saving claim:', error);
+      toast.error('Failed to save claim progress');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleContinue = () => {
-    toast.success('Moving to next stage');
+  const handleSubmit = async () => {
+    if (!claimData) return;
+    
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`http://localhost:8081/api/claims/${claimData.srId}/submit`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...claimData,
+          stageData: formValues
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to submit claim');
+      }
+      
+      const updatedData = await response.json();
+      setClaimData(updatedData);
+      toast.success('Claim submitted successfully');
+    } catch (error) {
+      console.error('Error submitting claim:', error);
+      toast.error('Failed to submit claim');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (loading) {
@@ -483,20 +537,21 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
               <Button 
                 variant="outline" 
                 onClick={handleSaveForLater}
+                disabled={isSaving}
                 className="border-gray-300 text-gray-700"
               >
-                Save for Later
+                {isSaving ? 'Saving...' : 'Save for Later'}
+                {!isSaving && <Save className="ml-2 h-4 w-4" />}
               </Button>
               
-              {configurationArray.find(stage => stage.stageName === activeTab)?.actions?.map(action => (
-                <Button 
-                  key={action.option}
-                  onClick={handleContinue}
-                  className="bg-claims-blue hover:bg-claims-blue-dark"
-                >
-                  {action.option === "submit" ? "Submit" : action.option}
-                </Button>
-              ))}
+              <Button 
+                onClick={handleSubmit}
+                disabled={isSubmitting}
+                className="bg-claims-blue hover:bg-claims-blue-dark"
+              >
+                {isSubmitting ? 'Submitting...' : 'Submit'}
+                {!isSubmitting && <ArrowRight className="ml-2 h-4 w-4" />}
+              </Button>
             </div>
           </div>
         )}
