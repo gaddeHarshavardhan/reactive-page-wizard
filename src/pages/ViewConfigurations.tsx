@@ -119,18 +119,40 @@ const ViewConfigurations = () => {
   };
   
   const handleEditConfig = (config: Configuration) => {
-    // Prepare the configuration structure that matches what the editor expects
+    // Fixed: Prepare the configuration structure that the editor expects
     const configToEdit = {
       id: config.id,
       category: config.categoryName,
       service: config.serviceName,
-      stages: config.configuration
+      stages: config.configuration.map(stage => ({
+        stageName: stage.stageName,
+        fields: stage.fields.map(field => ({
+          fieldLabel: field.name,
+          fieldType: capitalizeFirstLetter(field.type),
+          mandatory: field.mandatory,
+          options: field.options || []
+        })),
+        documents: stage.documents.map(doc => ({
+          documentType: doc.name,
+          format: doc.allowedFormat,
+          mandatory: doc.mandatory === "true"
+        })),
+        actions: stage.actions.map(action => ({
+          action: capitalizeFirstLetter(action.option),
+          nextStage: action.stage || ""
+        }))
+      }))
     };
     
     // Store the configuration in localStorage to be loaded by the editor
     localStorage.setItem('editConfig', JSON.stringify(configToEdit));
-    navigate('/');
+    navigate('/config');
     toast.success('Configuration loaded for editing');
+  };
+
+  // Helper function to capitalize first letter
+  const capitalizeFirstLetter = (string: string) => {
+    return string.charAt(0).toUpperCase() + string.slice(1);
   };
 
   // Function to count stages, fields, and documents for a configuration

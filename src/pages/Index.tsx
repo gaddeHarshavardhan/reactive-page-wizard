@@ -1,19 +1,13 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ClaimStage from '@/components/ClaimStage';
 import StageConnector from '@/components/StageConnector';
-import FormFieldRow from '@/components/FormFieldRow';
-import DocumentRow from '@/components/DocumentRow';
-import ActionRow from '@/components/ActionRow';
 import { Plus, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { error } from 'console';
@@ -266,30 +260,51 @@ const Index = () => {
     setActiveStage(stageName);
   };
 
-  // Handle start configuration button - Updated to load default template
-  const handleStartConfiguration = () => {
-    if (!selectedCategory || !selectedService) {
-      toast.error("Please select both category and service");
-      return;
+  // Load edit configuration from localStorage if it exists
+  useEffect(() => {
+    const editConfigJson = localStorage.getItem('editConfig');
+    if (editConfigJson) {
+      try {
+        const editConfig = JSON.parse(editConfigJson);
+        
+        // Set category and service
+        setSelectedCategory(editConfig.category);
+        setSelectedService(editConfig.service);
+        setShowConfigSection(true);
+        
+        // Extract and set stages, form fields, documents, and actions
+        const configStages = editConfig.stages.map((stage: any) => stage.stageName);
+        setStages(configStages);
+        
+        const configFormFields: Record<string, FormField[]> = {};
+        const configDocuments: Record<string, Document[]> = {};
+        const configActions: Record<string, Action[]> = {};
+        
+        editConfig.stages.forEach((stage: any) => {
+          configFormFields[stage.stageName] = stage.fields || [];
+          configDocuments[stage.stageName] = stage.documents || [];
+          configActions[stage.stageName] = stage.actions || [];
+        });
+        
+        setFormFields(configFormFields);
+        setDocuments(configDocuments);
+        setActions(configActions);
+        
+        if (configStages.length > 0) {
+          setActiveStage(configStages[0]);
+        }
+        
+        // Clear localStorage after loading
+        localStorage.removeItem('editConfig');
+        
+        toast.success('Configuration loaded for editing');
+      } catch (error) {
+        console.error('Error loading edit configuration:', error);
+        toast.error('Failed to load configuration for editing');
+      }
     }
-    
-    setShowConfigSection(true);
-    
-    // Load the default template
-    loadDefaultTemplate();
-    
-    toast.success("Default configuration template loaded");
-  };
-  
-  // Helper function to load the default template
-  const loadDefaultTemplate = () => {
-    setStages(defaultStages);
-    setFormFields(JSON.parse(JSON.stringify(defaultFormFields)));
-    setDocuments(JSON.parse(JSON.stringify(defaultDocuments)));
-    setActions(JSON.parse(JSON.stringify(defaultActions)));
-    setActiveStage(defaultStages[0]);
-  };
-  
+  }, []);
+
   // Helper function to capitalize the first letter of a string
   const capitalizeFirstLetter = (str: string) => {
     return str.charAt(0).toUpperCase() + str.slice(1);
@@ -533,7 +548,30 @@ const Index = () => {
     }
   };
 
-  // Function to save configuration and navigate to form with preview mode
+  // Handle start configuration button - Updated to load default template
+  const handleStartConfiguration = () => {
+    if (!selectedCategory || !selectedService) {
+      toast.error("Please select both category and service");
+      return;
+    }
+    
+    setShowConfigSection(true);
+    
+    // Don't load any existing configuration
+    setStages([]);
+    setFormFields({});
+    setDocuments({});
+    setActions({});
+    
+    toast.success("Ready to configure");
+  };
+  
+  // Helper function to load the default template - removed this functionality
+  const loadDefaultTemplate = () => {
+    // No longer loading default template
+  };
+
+  // Function to save configuration
   const handleSaveConfiguration = async () => {
     setIsSaving(true);
     
@@ -582,27 +620,26 @@ const Index = () => {
       })
     };
     
-    const response = await fetch('http://localhost:8081/api/configs', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(transformedData),
-    }).then(
-      (res) => {
-        console.log(res);
+    try {
+      const response = await fetch('http://localhost:8081/api/configs', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(transformedData),
+      });
+      
+      if (response.ok) {
         toast.success("Configuration saved successfully");
+      } else {
+        throw new Error("Failed to save configuration");
       }
-    ).catch(
-      (error) => { 
-        console.log(error);
-        toast.error("Configuration Failed");
-      }
-    ).finally(
-      () => {
-        setIsSaving(false);
-      }
-    );
+    } catch (error) {
+      console.error(error);
+      toast.error("Configuration failed to save");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // Get available next stages (only stages after the current one)
@@ -612,9 +649,9 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
       {/* Header */}
-      <header className="bg-claims-blue py-5 px-8 text-white">
+      <header className="bg-gradient-to-r from-blue-600 to-indigo-700 py-5 px-8 text-white shadow-md">
         <div className="max-w-7xl mx-auto">
           <div className="flex justify-between items-center">
             <h1 className="text-2xl font-medium animate-fade-in">Configurable Claims Framework</h1>
@@ -626,8 +663,8 @@ const Index = () => {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-6">
         {/* Category and Service Selection */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6 animate-fade-in-up">
-          <h2 className="text-xl font-medium mb-4">Select Category and Service</h2>
+        <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6 animate-fade-in-up shadow-md">
+          <h2 className="text-xl font-medium mb-4 text-blue-700">Select Category and Service</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
@@ -674,7 +711,7 @@ const Index = () => {
           {!showConfigSection && (
             <Button 
               onClick={handleStartConfiguration} 
-              className="mt-4"
+              className="mt-4 bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 shadow-md"
               disabled={!selectedCategory || !selectedService}
             >
               Start Configuration
@@ -701,8 +738,8 @@ const Index = () => {
         {showConfigSection && (
           <>
             {/* Stages */}
-            <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6 animate-fade-in-up">
-              <div className="flex items-center justify-start">
+            <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6 animate-fade-in-up shadow-md">
+              <div className="flex flex-wrap items-center justify-start gap-2">
                 {stages.map((stage, index) => (
                   <React.Fragment key={stage}>
                     <ClaimStage 
@@ -733,31 +770,31 @@ const Index = () => {
             {/* Configure Stage Section - Only show if a stage is selected */}
             {activeStage && (
               <>
-                <h2 className="text-2xl font-medium mb-6 animate-fade-in">Configure Stage: {activeStage}</h2>
+                <h2 className="text-2xl font-medium mb-6 animate-fade-in bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-700">Configure Stage: {activeStage}</h2>
 
                 {/* Form Fields Section */}
-                <div className="bg-white rounded-lg border border-gray-200 mb-6 animate-fade-in-up">
+                <div className="bg-white rounded-lg border border-gray-200 mb-6 animate-fade-in-up shadow-md">
                   <div className="p-6">
-                    <h3 className="text-xl font-medium mb-4">Form Fields</h3>
+                    <h3 className="text-xl font-medium mb-4 text-blue-700">Form Fields</h3>
                     <div className="overflow-x-auto">
                       <table className="w-full claims-table">
                         <thead>
-                          <tr className="bg-claims-gray-light">
-                            <th className="w-1/3 rounded-tl-md">Field Label</th>
-                            <th className="w-1/3">Field Type</th>
-                            <th className="w-1/6 text-center">Mandatory</th>
-                            <th className="w-1/6">Options</th>
-                            <th className="w-1/12 rounded-tr-md">Actions</th>
+                          <tr className="bg-gradient-to-r from-blue-50 to-indigo-50 text-gray-700">
+                            <th className="w-1/3 rounded-tl-md p-3">Field Label</th>
+                            <th className="w-1/3 p-3">Field Type</th>
+                            <th className="w-1/6 text-center p-3">Mandatory</th>
+                            <th className="w-1/6 p-3">Options</th>
+                            <th className="w-1/12 rounded-tr-md p-3">Actions</th>
                           </tr>
                         </thead>
                         <tbody>
                           {formFields[activeStage]?.map((field, index) => (
-                            <tr key={index} className="border-t border-gray-200 animate-fade-in">
+                            <tr key={index} className="border-t border-gray-200 animate-fade-in hover:bg-gray-50">
                               <td className="p-4">{field.fieldLabel}</td>
                               <td className="p-4">{field.fieldType}</td>
                               <td className="p-4 text-center">
                                 {field.mandatory && (
-                                  <div className="inline-flex items-center justify-center w-6 h-6 bg-claims-green rounded-full">
+                                  <div className="inline-flex items-center justify-center w-6 h-6 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full">
                                     <svg 
                                       className="w-4 h-4 text-white" 
                                       fill="none" 
@@ -808,7 +845,7 @@ const Index = () => {
 
                     <button 
                       onClick={() => setIsAddFieldOpen(true)}
-                      className="mt-4 flex items-center px-4 py-2 text-sm border border-gray-300 rounded-md text-gray-600 hover:bg-gray-50 transition-colors"
+                      className="mt-4 flex items-center px-4 py-2 text-sm bg-blue-50 border border-blue-200 rounded-md text-blue-600 hover:bg-blue-100 transition-colors"
                     >
                       <Plus size={16} className="mr-2" />
                       Add Field
@@ -817,27 +854,27 @@ const Index = () => {
                 </div>
 
                 {/* Documents Section */}
-                <div className="bg-white rounded-lg border border-gray-200 mb-6 animate-fade-in-up">
+                <div className="bg-white rounded-lg border border-gray-200 mb-6 animate-fade-in-up shadow-md">
                   <div className="p-6">
-                    <h3 className="text-xl font-medium mb-4">Required Documents</h3>
+                    <h3 className="text-xl font-medium mb-4 text-purple-700">Required Documents</h3>
                     <div className="overflow-x-auto">
                       <table className="w-full claims-table">
                         <thead>
-                          <tr>
-                            <th className="w-1/3 rounded-tl-md">Document Type</th>
-                            <th className="w-1/3">Format</th>
-                            <th className="w-1/4 text-center">Mandatory</th>
-                            <th className="w-1/12 rounded-tr-md">Actions</th>
+                          <tr className="bg-gradient-to-r from-purple-50 to-indigo-50 text-gray-700">
+                            <th className="w-1/3 rounded-tl-md p-3">Document Type</th>
+                            <th className="w-1/3 p-3">Format</th>
+                            <th className="w-1/4 text-center p-3">Mandatory</th>
+                            <th className="w-1/12 rounded-tr-md p-3">Actions</th>
                           </tr>
                         </thead>
                         <tbody>
                           {documents[activeStage]?.map((doc, index) => (
-                            <tr key={index} className="border-t border-gray-200 animate-fade-in">
+                            <tr key={index} className="border-t border-gray-200 animate-fade-in hover:bg-gray-50">
                               <td className="p-4">{doc.documentType}</td>
                               <td className="p-4">{doc.format.join(", ")}</td>
                               <td className="p-4 text-center">
                                 {doc.mandatory && (
-                                  <div className="inline-flex items-center justify-center w-6 h-6 bg-claims-green rounded-full">
+                                  <div className="inline-flex items-center justify-center w-6 h-6 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full">
                                     <svg 
                                       className="w-4 h-4 text-white" 
                                       fill="none" 
@@ -879,7 +916,7 @@ const Index = () => {
 
                     <button 
                       onClick={() => setIsAddDocumentOpen(true)}
-                      className="mt-4 flex items-center px-4 py-2 text-sm border border-gray-300 rounded-md text-gray-600 hover:bg-gray-50 transition-colors"
+                      className="mt-4 flex items-center px-4 py-2 text-sm bg-purple-50 border border-purple-200 rounded-md text-purple-600 hover:bg-purple-100 transition-colors"
                     >
                       <Plus size={16} className="mr-2" />
                       Add Document
@@ -888,21 +925,21 @@ const Index = () => {
                 </div>
 
                 {/* Actions Section */}
-                <div className="bg-white rounded-lg border border-gray-200 mb-6 animate-fade-in-up">
+                <div className="bg-white rounded-lg border border-gray-200 mb-6 animate-fade-in-up shadow-md">
                   <div className="p-6">
-                    <h3 className="text-xl font-medium mb-4">Stage Actions</h3>
+                    <h3 className="text-xl font-medium mb-4 text-amber-700">Stage Actions</h3>
                     <div className="overflow-x-auto">
                       <table className="w-full claims-table">
                         <thead>
-                          <tr>
-                            <th className="w-1/2 rounded-tl-md">Action</th>
-                            <th className="w-1/3">Next Stage</th>
-                            <th className="w-1/12 rounded-tr-md">Actions</th>
+                          <tr className="bg-gradient-to-r from-amber-50 to-orange-50 text-gray-700">
+                            <th className="w-1/2 rounded-tl-md p-3">Action</th>
+                            <th className="w-1/3 p-3">Next Stage</th>
+                            <th className="w-1/12 rounded-tr-md p-3">Actions</th>
                           </tr>
                         </thead>
                         <tbody>
                           {actions[activeStage]?.map((action, index) => (
-                            <tr key={index} className="border-t border-gray-200 animate-fade-in">
+                            <tr key={index} className="border-t border-gray-200 animate-fade-in hover:bg-gray-50">
                               <td className="p-4">{action.action}</td>
                               <td className="p-4">{action.nextStage || "(None)"}</td>
                               <td className="p-4 text-center">
@@ -914,285 +951,3 @@ const Index = () => {
                                   <X size={18} />
                                 </button>
                               </td>
-                            </tr>
-                          ))}
-                          {actions[activeStage]?.length === 0 && (
-                            <tr>
-                              <td colSpan={3} className="p-4 text-center text-gray-500">
-                                No actions added yet. Click "Add Action" to get started.
-                              </td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    <button 
-                      onClick={() => setIsAddActionOpen(true)}
-                      className="mt-4 flex items-center px-4 py-2 text-sm border border-gray-300 rounded-md text-gray-600 hover:bg-gray-50 transition-colors"
-                    >
-                      <Plus size={16} className="mr-2" />
-                      Add Action
-                    </button>
-                  </div>
-                </div>
-
-                {/* Save Buttons */}
-                <div className="flex mb-8 animate-fade-in">
-                  <Button 
-                    onClick={handleSaveConfiguration}
-                    disabled={isSaving || stages.length === 0}
-                    className="bg-claims-blue hover:bg-claims-blue-dark"
-                  >
-                    {isSaving ? "Saving..." : "Save Configuration"}
-                  </Button>
-                </div>
-              </>
-            )}
-          </>
-        )}
-      </main>
-
-      {/* Add Field Dialog */}
-      <Dialog open={isAddFieldOpen} onOpenChange={setIsAddFieldOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Add Form Field</DialogTitle>
-          </DialogHeader>
-          
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="fieldLabel" className="text-right">
-                Field Label
-              </Label>
-              <Input
-                id="fieldLabel"
-                value={newField.fieldLabel}
-                onChange={(e) => setNewField({...newField, fieldLabel: e.target.value})}
-                className="col-span-3"
-              />
-            </div>
-            
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="fieldType" className="text-right">
-                Field Type
-              </Label>
-              <Select
-                value={newField.fieldType}
-                onValueChange={(value) => setNewField({...newField, fieldType: value})}
-              >
-                <SelectTrigger id="fieldType" className="col-span-3">
-                  <SelectValue placeholder="Select a field type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Text">Text</SelectItem>
-                  <SelectItem value="Textarea">Textarea</SelectItem>
-                  <SelectItem value="Number">Number</SelectItem>
-                  <SelectItem value="Date">Date</SelectItem>
-                  <SelectItem value="Dropdown">Dropdown</SelectItem>
-                  <SelectItem value="Checkbox">Checkbox</SelectItem>
-                  <SelectItem value="Radio Buttons">Radio Buttons</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="mandatory" className="text-right">
-                Mandatory
-              </Label>
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="mandatory" 
-                  checked={newField.mandatory}
-                  onCheckedChange={(checked) => 
-                    setNewField({...newField, mandatory: checked === true})
-                  }
-                />
-                <label
-                  htmlFor="mandatory"
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                >
-                  Required field
-                </label>
-              </div>
-            </div>
-            
-            {(newField.fieldType === "Dropdown" || newField.fieldType === "Radio Buttons") && (
-              <div className="grid grid-cols-4 items-start gap-4">
-                <Label className="text-right pt-2">
-                  Options
-                </Label>
-                <div className="col-span-3 space-y-3">
-                  <div className="flex items-center space-x-2">
-                    <Input
-                      value={optionInput}
-                      onChange={(e) => setOptionInput(e.target.value)}
-                      placeholder="Enter option"
-                    />
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      size="sm"
-                      onClick={handleAddOption}
-                    >
-                      Add
-                    </Button>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    {newField.options?.map((option, index) => (
-                      <div key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded-md">
-                        <span>{option}</span>
-                        <Button 
-                          type="button" 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => handleRemoveOption(index)}
-                          className="h-8 w-8 p-0 text-red-500"
-                        >
-                          <X size={16} />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-          
-          <DialogFooter>
-            <Button type="button" onClick={handleAddField}>
-              Add Field
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Add Document Dialog */}
-      <Dialog open={isAddDocumentOpen} onOpenChange={setIsAddDocumentOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Add Required Document</DialogTitle>
-          </DialogHeader>
-          
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="documentType" className="text-right">
-                Document Type
-              </Label>
-              <Input
-                id="documentType"
-                value={newDocument.documentType}
-                onChange={(e) => setNewDocument({...newDocument, documentType: e.target.value})}
-                className="col-span-3"
-              />
-            </div>
-            
-            <div className="grid grid-cols-4 items-start gap-4">
-              <Label className="text-right pt-2">
-                Allowed Formats
-              </Label>
-              <div className="col-span-3 space-y-2">
-                {formatOptions.map(format => (
-                  <div key={format} className="flex items-center space-x-2">
-                    <Checkbox 
-                      id={`format-${format}`} 
-                      checked={newDocument.format.includes(format)}
-                      onCheckedChange={() => toggleFormat(format)}
-                    />
-                    <label
-                      htmlFor={`format-${format}`}
-                      className="text-sm font-medium leading-none"
-                    >
-                      {format}
-                    </label>
-                  </div>
-                ))}
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="doc-mandatory" className="text-right">
-                Mandatory
-              </Label>
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="doc-mandatory" 
-                  checked={newDocument.mandatory}
-                  onCheckedChange={(checked) => 
-                    setNewDocument({...newDocument, mandatory: checked === true})
-                  }
-                />
-                <label
-                  htmlFor="doc-mandatory"
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                >
-                  Required document
-                </label>
-              </div>
-            </div>
-          </div>
-          
-          <DialogFooter>
-            <Button type="button" onClick={handleAddDocument}>
-              Add Document
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Add Action Dialog */}
-      <Dialog open={isAddActionOpen} onOpenChange={setIsAddActionOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Add Stage Action</DialogTitle>
-          </DialogHeader>
-          
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="actionName" className="text-right">
-                Action Name
-              </Label>
-              <Input
-                id="actionName"
-                value={newAction.action}
-                onChange={(e) => setNewAction({...newAction, action: e.target.value})}
-                className="col-span-3"
-              />
-            </div>
-            
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="nextStage" className="text-right">
-                Next Stage
-              </Label>
-              <Select
-                value={newAction.nextStage}
-                onValueChange={(value) => setNewAction({...newAction, nextStage: value})}
-              >
-                <SelectTrigger id="nextStage" className="col-span-3">
-                  <SelectValue placeholder="Select next stage (optional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">None</SelectItem>
-                  {getAvailableNextStages().map(stage => (
-                    <SelectItem key={stage} value={stage}>
-                      {stage}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          
-          <DialogFooter>
-            <Button type="button" onClick={handleAddAction}>
-              Add Action
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-};
-
-export default Index;
