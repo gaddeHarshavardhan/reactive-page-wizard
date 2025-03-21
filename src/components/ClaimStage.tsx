@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { Plus, X, Pencil, Check } from 'lucide-react';
 import { Input } from './ui/input';
@@ -25,6 +25,21 @@ const ClaimStage: React.FC<ClaimStageProps> = ({
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [stageName, setStageName] = useState(label);
+  const [showNameInput, setShowNameInput] = useState(false);
+  const [newStageName, setNewStageName] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [isEditing]);
+
+  useEffect(() => {
+    if (showNameInput && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [showNameInput]);
 
   const handleRename = () => {
     if (onRename && stageName.trim()) {
@@ -42,11 +57,43 @@ const ClaimStage: React.FC<ClaimStageProps> = ({
     }
   };
 
+  const handleAddStageClick = () => {
+    if (isAddStage) {
+      setShowNameInput(true);
+    } else if (onClick) {
+      onClick();
+    }
+  };
+
+  const handleCreateStage = () => {
+    if (onClick && newStageName.trim()) {
+      // Store the name temporarily
+      localStorage.setItem('newStageName', newStageName.trim());
+      onClick();
+      setShowNameInput(false);
+      setNewStageName('');
+    } else if (!newStageName.trim()) {
+      // If empty, just proceed with default naming
+      onClick?.();
+      setShowNameInput(false);
+    }
+  };
+
+  const handleNewStageKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleCreateStage();
+    } else if (e.key === 'Escape') {
+      setShowNameInput(false);
+      setNewStageName('');
+    }
+  };
+
   return (
     <div className="relative">
       {isEditing ? (
         <div className="flex items-center">
           <Input
+            ref={inputRef}
             value={stageName}
             onChange={(e) => setStageName(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -61,9 +108,28 @@ const ClaimStage: React.FC<ClaimStageProps> = ({
             <Check size={16} />
           </button>
         </div>
+      ) : showNameInput ? (
+        <div className="flex items-center">
+          <Input
+            ref={inputRef}
+            value={newStageName}
+            onChange={(e) => setNewStageName(e.target.value)}
+            onKeyDown={handleNewStageKeyDown}
+            placeholder="Enter stage name"
+            className="h-8 pr-8 min-w-[150px]"
+            autoFocus
+          />
+          <button
+            onClick={handleCreateStage}
+            className="absolute right-2 text-blue-500 hover:text-blue-700"
+            aria-label="Create new stage"
+          >
+            <Check size={16} />
+          </button>
+        </div>
       ) : (
         <button
-          onClick={onClick}
+          onClick={handleAddStageClick}
           className={cn(
             "claims-stage animate-fade-in-up transition-all duration-300",
             isAddStage 
@@ -84,7 +150,7 @@ const ClaimStage: React.FC<ClaimStageProps> = ({
         </button>
       )}
       
-      {!isEditing && !isAddStage && (
+      {!isEditing && !isAddStage && !showNameInput && (
         <>
           <button 
             onClick={() => setIsEditing(true)}
