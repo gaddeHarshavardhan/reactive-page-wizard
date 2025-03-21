@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ClaimStage from '@/components/ClaimStage';
@@ -984,4 +985,214 @@ const Index = () => {
                   <SelectValue placeholder="Select a field type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Text">Text</SelectItem
+                  <SelectItem value="Text">Text</SelectItem>
+                  <SelectItem value="Textarea">Textarea</SelectItem>
+                  <SelectItem value="Number">Number</SelectItem>
+                  <SelectItem value="Date">Date</SelectItem>
+                  <SelectItem value="Dropdown">Dropdown</SelectItem>
+                  <SelectItem value="Checkbox">Checkbox</SelectItem>
+                  <SelectItem value="Radio Buttons">Radio Buttons</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="mandatory" className="text-right">
+                Mandatory
+              </Label>
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="mandatory" 
+                  checked={newField.mandatory}
+                  onCheckedChange={(checked) => 
+                    setNewField({...newField, mandatory: checked === true})
+                  }
+                />
+                <label
+                  htmlFor="mandatory"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Required field
+                </label>
+              </div>
+            </div>
+            
+            {(newField.fieldType === "Dropdown" || newField.fieldType === "Radio Buttons") && (
+              <div className="grid grid-cols-4 items-start gap-4">
+                <Label className="text-right pt-2">
+                  Options
+                </Label>
+                <div className="col-span-3 space-y-3">
+                  <div className="flex items-center space-x-2">
+                    <Input
+                      value={optionInput}
+                      onChange={(e) => setOptionInput(e.target.value)}
+                      placeholder="Enter option"
+                    />
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="sm"
+                      onClick={handleAddOption}
+                    >
+                      Add
+                    </Button>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    {newField.options?.map((option, index) => (
+                      <div key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded-md">
+                        <span>{option}</span>
+                        <Button 
+                          type="button" 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => handleRemoveOption(index)}
+                          className="h-8 w-8 p-0 text-red-500"
+                        >
+                          <X size={16} />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button type="button" onClick={handleAddField}>
+              Add Field
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Document Dialog */}
+      <Dialog open={isAddDocumentOpen} onOpenChange={setIsAddDocumentOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Add Required Document</DialogTitle>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="documentType" className="text-right">
+                Document Type
+              </Label>
+              <Input
+                id="documentType"
+                value={newDocument.documentType}
+                onChange={(e) => setNewDocument({...newDocument, documentType: e.target.value})}
+                className="col-span-3"
+              />
+            </div>
+            
+            <div className="grid grid-cols-4 items-start gap-4">
+              <Label className="text-right pt-2">
+                Allowed Formats
+              </Label>
+              <div className="col-span-3 space-y-2">
+                {formatOptions.map(format => (
+                  <div key={format} className="flex items-center space-x-2">
+                    <Checkbox 
+                      id={`format-${format}`} 
+                      checked={newDocument.format.includes(format)}
+                      onCheckedChange={() => toggleFormat(format)}
+                    />
+                    <label
+                      htmlFor={`format-${format}`}
+                      className="text-sm font-medium leading-none"
+                    >
+                      {format}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="doc-mandatory" className="text-right">
+                Mandatory
+              </Label>
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="doc-mandatory" 
+                  checked={newDocument.mandatory}
+                  onCheckedChange={(checked) => 
+                    setNewDocument({...newDocument, mandatory: checked === true})
+                  }
+                />
+                <label
+                  htmlFor="doc-mandatory"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Required document
+                </label>
+              </div>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button type="button" onClick={handleAddDocument}>
+              Add Document
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Action Dialog */}
+      <Dialog open={isAddActionOpen} onOpenChange={setIsAddActionOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Add Stage Action</DialogTitle>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="actionName" className="text-right">
+                Action Name
+              </Label>
+              <Input
+                id="actionName"
+                value={newAction.action}
+                onChange={(e) => setNewAction({...newAction, action: e.target.value})}
+                className="col-span-3"
+              />
+            </div>
+            
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="nextStage" className="text-right">
+                Next Stage
+              </Label>
+              <Select
+                value={newAction.nextStage}
+                onValueChange={(value) => setNewAction({...newAction, nextStage: value})}
+              >
+                <SelectTrigger id="nextStage" className="col-span-3">
+                  <SelectValue placeholder="Select next stage (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">None</SelectItem>
+                  {getAvailableNextStages().map(stage => (
+                    <SelectItem key={stage} value={stage}>
+                      {stage}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button type="button" onClick={handleAddAction}>
+              Add Action
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+export default Index;
