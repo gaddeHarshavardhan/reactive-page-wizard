@@ -217,7 +217,7 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
   }, [claimId]);
 
   const getStageIndex = (stageName: string): number => {
-    if (!claimConfig) return -1;
+    if (!claimConfig || !claimConfig.configuration) return -1;
     return claimConfig.configuration.findIndex(stage => stage.stageName === stageName);
   };
 
@@ -258,6 +258,9 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
   }
 
   const currentStageIndex = getCurrentStageIndex();
+
+  // Add a safety check for configuration
+  const configurationArray = claimConfig.configuration || [];
 
   return (
     <div className="space-y-6 bg-gray-50 p-6 rounded-lg">
@@ -304,7 +307,7 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
       
       {/* Claim Progress Timeline */}
       <div className="flex justify-center items-center py-8">
-        {claimConfig.configuration.map((stage, index) => (
+        {configurationArray.map((stage, index) => (
           <React.Fragment key={stage.stageName}>
             <div className="flex flex-col items-center">
               <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
@@ -319,7 +322,7 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
               <span className="text-sm mt-2 text-center max-w-[120px]">{stage.stageName}</span>
             </div>
             
-            {index < claimConfig.configuration.length - 1 && (
+            {index < configurationArray.length - 1 && (
               <div className={`h-[2px] w-24 mx-2 ${
                 index < currentStageIndex ? 'bg-blue-500' : 'bg-gray-300'
               }`} />
@@ -330,19 +333,19 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
       
       {/* Stage Content */}
       <div className="bg-white p-6 rounded-lg shadow-sm">
-        {activeTab && claimConfig.configuration.find(stage => stage.stageName === activeTab) && (
+        {activeTab && configurationArray.find(stage => stage.stageName === activeTab) && (
           <div>
             <h3 className="text-xl font-medium mb-6">
               {activeTab}
             </h3>
             
             {/* Form Fields Section */}
-            {claimConfig.configuration.find(stage => stage.stageName === activeTab)?.fields && (
+            {configurationArray.find(stage => stage.stageName === activeTab)?.fields && (
               <div className="mb-8">
                 <h4 className="text-lg font-medium mb-4">Form Fields</h4>
                 
                 <div className="space-y-6">
-                  {claimConfig.configuration.find(stage => stage.stageName === activeTab)?.fields?.map(field => (
+                  {configurationArray.find(stage => stage.stageName === activeTab)?.fields?.map(field => (
                     <div key={field.name} className="space-y-2">
                       <div className="flex items-center">
                         <Label htmlFor={field.name} className="block text-gray-700 font-medium">
@@ -404,11 +407,11 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
             )}
             
             {/* Documents Section */}
-            {claimConfig.configuration.find(stage => stage.stageName === activeTab)?.documents && (
+            {configurationArray.find(stage => stage.stageName === activeTab)?.documents && (
               <div className="mb-8">
                 <h4 className="text-lg font-medium mb-4">Required Documents</h4>
                 
-                {claimConfig.configuration.find(stage => stage.stageName === activeTab)?.documents?.map(doc => (
+                {configurationArray.find(stage => stage.stageName === activeTab)?.documents?.map(doc => (
                   <div key={doc.name} className="border border-gray-200 rounded-lg p-4 mb-4">
                     <div className="flex justify-between items-center">
                       <div>
@@ -443,7 +446,7 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
                 Save for Later
               </Button>
               
-              {claimConfig.configuration.find(stage => stage.stageName === activeTab)?.actions?.map(action => (
+              {configurationArray.find(stage => stage.stageName === activeTab)?.actions?.map(action => (
                 <Button 
                   key={action.option}
                   onClick={handleContinue}
