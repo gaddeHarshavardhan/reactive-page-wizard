@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ClaimStage from '@/components/ClaimStage';
@@ -1246,7 +1245,7 @@ const Index = () => {
                   <SelectValue placeholder="Select next stage" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">End of Claim</SelectItem>
+                  <SelectItem value="end_of_claim">End of Claim</SelectItem>
                   {getAvailableNextStages().map((stage) => (
                     <SelectItem key={stage} value={stage}>{stage}</SelectItem>
                   ))}
@@ -1276,7 +1275,7 @@ const Index = () => {
                   <div className="grid gap-2 mb-3">
                     <Label htmlFor="conditionField">If Field</Label>
                     <Select 
-                      value={selectedField} 
+                      value={selectedField || availableFields[0]?.fieldLabel || "no_field"} 
                       onValueChange={setSelectedField}
                     >
                       <SelectTrigger id="conditionField">
@@ -1295,7 +1294,8 @@ const Index = () => {
                   <div className="grid gap-2">
                     <Label htmlFor="conditionValue">Is Equal To</Label>
                     <Select 
-                      value={selectedValue} 
+                      value={selectedValue || 
+                        (availableFields.find(f => f.fieldLabel === selectedField)?.options?.[0] || "no_value")}
                       onValueChange={setSelectedValue}
                       disabled={!selectedField}
                     >
