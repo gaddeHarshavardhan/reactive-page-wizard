@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ClaimStage from '@/components/ClaimStage';
@@ -275,77 +274,10 @@ const Index = () => {
     
     setShowConfigSection(true);
     
-    // Check if we're editing an existing configuration
-    const editConfig = localStorage.getItem('editConfig');
+    // Load the default template
+    loadDefaultTemplate();
     
-    if (editConfig) {
-      try {
-        const parsedConfig = JSON.parse(editConfig);
-        
-        // Set category and service from the config
-        setSelectedCategory(parsedConfig.category || selectedCategory);
-        setSelectedService(parsedConfig.service || selectedService);
-        
-        // Load stages
-        const loadedStages = parsedConfig.stages.map((stage: any) => stage.stageName);
-        setStages(loadedStages);
-        
-        // Load form fields
-        const loadedFormFields: Record<string, FormField[]> = {};
-        parsedConfig.stages.forEach((stage: any) => {
-          loadedFormFields[stage.stageName] = stage.fields.map((field: any) => ({
-            fieldLabel: field.name,
-            fieldType: capitalizeFirstLetter(field.type),
-            mandatory: field.mandatory,
-            options: field.options || []
-          }));
-        });
-        setFormFields(loadedFormFields);
-        
-        // Load documents
-        const loadedDocuments: Record<string, Document[]> = {};
-        parsedConfig.stages.forEach((stage: any) => {
-          loadedDocuments[stage.stageName] = stage.documents.map((doc: any) => ({
-            documentType: doc.name,
-            format: doc.allowedFormat,
-            mandatory: doc.mandatory === true || doc.mandatory === "true"
-          }));
-        });
-        setDocuments(loadedDocuments);
-        
-        // Load actions
-        const loadedActions: Record<string, Action[]> = {};
-        parsedConfig.stages.forEach((stage: any) => {
-          loadedActions[stage.stageName] = stage.actions.map((action: any) => ({
-            action: capitalizeFirstLetter(action.option),
-            nextStage: action.stage || ""
-          }));
-        });
-        setActions(loadedActions);
-        
-        // Set active stage to the first one
-        if (loadedStages.length > 0) {
-          setActiveStage(loadedStages[0]);
-        }
-        
-        // Remove the stored config to avoid reloading it later
-        localStorage.removeItem('editConfig');
-        
-        toast.success("Configuration loaded for editing");
-      } catch (error) {
-        console.error("Error parsing configuration:", error);
-        
-        // If there's an error, load the default template
-        loadDefaultTemplate();
-        
-        toast.error("Failed to load configuration, using default template");
-      }
-    } else {
-      // Load the default template if not editing
-      loadDefaultTemplate();
-      
-      toast.success("Default configuration template loaded");
-    }
+    toast.success("Default configuration template loaded");
   };
   
   // Helper function to load the default template
@@ -601,94 +533,6 @@ const Index = () => {
   };
 
   // Function to save configuration and navigate to form with preview mode
-  const handleSaveAndPreview = async () => {
-    setIsSaving(true);
-    
-    // Transform the data into the requested structure
-    const transformedData = {
-      category: selectedCategory,
-      service: selectedService,
-      stages: stages.map(stageName => {
-        return {
-          stageName: stageName,
-          fields: formFields[stageName]?.map(field => {
-            // Create the base field object
-            const fieldObj: any = {
-              name: field.fieldLabel,
-              type: field.fieldType.toLowerCase(),
-              mandatory: field.mandatory,
-            };
-            
-            // Add options array for dropdown and radio buttons
-            if (field.fieldType === "Dropdown" || field.fieldType === "Radio Buttons") {
-              fieldObj.options = field.options || [];
-            }
-            
-            return fieldObj;
-          }) || [],
-          documents: documents[stageName]?.map(doc => ({
-            name: doc.documentType,
-            mandatory: doc.mandatory,
-            allowedFormat: doc.format
-          })) || [],
-          actions: actions[stageName]?.map(action => ({
-            option: action.action.toLowerCase(),
-            stage: action.nextStage,
-            // Set all actions as view-only in preview mode
-            buttonLabel: action.action,
-            condition: "All fields valid"
-          })) || []
-        };
-      })
-    };
-    
-    try {
-      console.log('Configuration for preview:', transformedData);
-      
-      // Store in localStorage to simulate persistence
-      localStorage.setItem('claimConfig', JSON.stringify(transformedData));
-      localStorage.setItem('previewMode', 'true'); // Add flag for preview mode
-      
-      // Also call the save configuration API endpoint like in handleSaveConfiguration
-      const response = await fetch('http://localhost:8081/api/configs', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(transformedData),
-      }).then(
-        (res) => {
-          console.log(res);
-          toast.success("Configuration saved and ready for preview");
-          
-          // Navigate to the claim form page
-          setTimeout(() => {
-            navigate('/claim-form');
-          }, 1000);
-        }
-      ).catch(
-        (error) => { 
-          console.log(error);
-          toast.error("Configuration save failed, but preview is available");
-          
-          // Still navigate to preview even if API call fails
-          setTimeout(() => {
-            navigate('/claim-form');
-          }, 1000);
-        }
-      ).finally(
-        () => {
-          setIsSaving(false);
-        }
-      );
-    } catch (error) {
-      console.error("Error saving configuration:", error);
-      setIsSaving(false);
-      toast.error("Error saving configuration");
-    }
-  };
-
-  // Function to save configuration
   const handleSaveConfiguration = async () => {
     setIsSaving(true);
     
@@ -751,7 +595,7 @@ const Index = () => {
     ).catch(
       (error) => { 
         console.log(error);
-        toast.error("Configuration Failed")
+        toast.error("Configuration Failed");
       }
     ).finally(
       () => {
@@ -1093,21 +937,13 @@ const Index = () => {
                 </div>
 
                 {/* Save Buttons */}
-                <div className="flex gap-4 mb-8 animate-fade-in">
+                <div className="flex mb-8 animate-fade-in">
                   <Button 
                     onClick={handleSaveConfiguration}
                     disabled={isSaving || stages.length === 0}
                     className="bg-claims-blue hover:bg-claims-blue-dark"
                   >
                     {isSaving ? "Saving..." : "Save Configuration"}
-                  </Button>
-                  
-                  <Button 
-                    onClick={handleSaveAndPreview}
-                    disabled={isSaving || stages.length === 0}
-                    variant="outline"
-                  >
-                    {isSaving ? "Preparing Preview..." : "Save & Preview"}
                   </Button>
                 </div>
               </>
@@ -1148,217 +984,4 @@ const Index = () => {
                   <SelectValue placeholder="Select a field type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Text">Text</SelectItem>
-                  <SelectItem value="Number">Number</SelectItem>
-                  <SelectItem value="Date">Date</SelectItem>
-                  <SelectItem value="Textarea">Textarea</SelectItem>
-                  <SelectItem value="Dropdown">Dropdown</SelectItem>
-                  <SelectItem value="Radio Buttons">Radio Buttons</SelectItem>
-                  <SelectItem value="Checkbox">Checkbox</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="grid grid-cols-4 items-center gap-4">
-              <div className="text-right">
-                <Label htmlFor="mandatory">Mandatory</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="mandatory" 
-                  checked={newField.mandatory}
-                  onCheckedChange={(checked) => 
-                    setNewField({...newField, mandatory: checked === true})
-                  }
-                />
-                <label
-                  htmlFor="mandatory"
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                >
-                  Required field
-                </label>
-              </div>
-            </div>
-            
-            {/* Options for Dropdown and Radio Button types */}
-            {(newField.fieldType === "Dropdown" || newField.fieldType === "Radio Buttons") && (
-              <div className="grid grid-cols-4 items-start gap-4">
-                <Label className="text-right mt-2">
-                  Options
-                </Label>
-                <div className="col-span-3 space-y-2">
-                  <div className="flex space-x-2">
-                    <Input
-                      value={optionInput}
-                      onChange={(e) => setOptionInput(e.target.value)}
-                      placeholder="Enter an option"
-                      className="flex-1"
-                    />
-                    <Button 
-                      type="button" 
-                      onClick={handleAddOption}
-                      variant="outline"
-                      size="sm"
-                    >
-                      Add
-                    </Button>
-                  </div>
-                  
-                  {newField.options && newField.options.length > 0 && (
-                    <div className="bg-gray-50 p-2 rounded-md">
-                      <Label className="text-sm text-gray-500 mb-2">Added Options:</Label>
-                      <div className="space-y-1 mt-1">
-                        {newField.options.map((option, index) => (
-                          <div key={index} className="flex justify-between items-center bg-white p-2 rounded">
-                            <span>{option}</span>
-                            <button
-                              onClick={() => handleRemoveOption(index)}
-                              className="text-red-500 hover:text-red-700"
-                              aria-label="Remove option"
-                            >
-                              <X size={16} />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-          
-          <DialogFooter>
-            <Button type="button" onClick={handleAddField}>
-              Add Field
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Add Document Dialog */}
-      <Dialog open={isAddDocumentOpen} onOpenChange={setIsAddDocumentOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Add Document</DialogTitle>
-          </DialogHeader>
-          
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="documentType" className="text-right">
-                Document Type
-              </Label>
-              <Input
-                id="documentType"
-                value={newDocument.documentType}
-                onChange={(e) => setNewDocument({...newDocument, documentType: e.target.value})}
-                className="col-span-3"
-              />
-            </div>
-            
-            <div className="grid grid-cols-4 items-start gap-4">
-              <Label className="text-right mt-2">
-                Format
-              </Label>
-              <div className="col-span-3 space-y-2">
-                {formatOptions.map(format => (
-                  <div key={format} className="flex items-center space-x-2">
-                    <Checkbox 
-                      id={`format-${format}`} 
-                      checked={newDocument.format.includes(format)}
-                      onCheckedChange={() => toggleFormat(format)}
-                    />
-                    <label
-                      htmlFor={`format-${format}`}
-                      className="text-sm font-medium leading-none"
-                    >
-                      {format}
-                    </label>
-                  </div>
-                ))}
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-4 items-center gap-4">
-              <div className="text-right">
-                <Label htmlFor="docMandatory">Mandatory</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="docMandatory" 
-                  checked={newDocument.mandatory}
-                  onCheckedChange={(checked) => 
-                    setNewDocument({...newDocument, mandatory: checked === true})
-                  }
-                />
-                <label
-                  htmlFor="docMandatory"
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                >
-                  Required document
-                </label>
-              </div>
-            </div>
-          </div>
-          
-          <DialogFooter>
-            <Button type="button" onClick={handleAddDocument}>
-              Add Document
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Add Action Dialog */}
-      <Dialog open={isAddActionOpen} onOpenChange={setIsAddActionOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Add Action</DialogTitle>
-          </DialogHeader>
-          
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="actionName" className="text-right">
-                Action Name
-              </Label>
-              <Input
-                id="actionName"
-                value={newAction.action}
-                onChange={(e) => setNewAction({...newAction, action: e.target.value})}
-                className="col-span-3"
-              />
-            </div>
-            
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="nextStage" className="text-right">
-                Next Stage
-              </Label>
-              <Select
-                value={newAction.nextStage}
-                onValueChange={(value) => setNewAction({...newAction, nextStage: value})}
-              >
-                <SelectTrigger id="nextStage" className="col-span-3">
-                  <SelectValue placeholder="Select next stage (optional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">None (End of flow)</SelectItem>
-                  {getAvailableNextStages().map(stage => (
-                    <SelectItem key={stage} value={stage}>{stage}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          
-          <DialogFooter>
-            <Button type="button" onClick={handleAddAction}>
-              Add Action
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-};
-
-export default Index;
+                  <SelectItem value="Text">Text</SelectItem

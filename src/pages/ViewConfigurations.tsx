@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -120,9 +119,17 @@ const ViewConfigurations = () => {
   };
   
   const handleEditConfig = (config: Configuration) => {
+    // Prepare the configuration structure that matches what the editor expects
+    const configToEdit = {
+      id: config.id,
+      category: config.categoryName,
+      service: config.serviceName,
+      stages: config.configuration
+    };
+    
     // Store the configuration in localStorage to be loaded by the editor
-    localStorage.setItem('editConfig', JSON.stringify(config));
-    navigate('/config');
+    localStorage.setItem('editConfig', JSON.stringify(configToEdit));
+    navigate('/');
     toast.success('Configuration loaded for editing');
   };
 
@@ -139,19 +146,6 @@ const ViewConfigurations = () => {
     });
     
     return { stageCount, fieldCount, documentCount };
-  };
-
-  // Get the appropriate status badge style based on stages and fields
-  const getStatusBadge = (config: Configuration) => {
-    const { stageCount, fieldCount } = getCounts(config);
-    
-    if (stageCount > 2 && fieldCount > 5) {
-      return <Badge className="bg-amber-500">In Progress</Badge>;
-    } else if (stageCount > 0) {
-      return <Badge className="bg-amber-500">In Progress</Badge>;
-    } else {
-      return <Badge className="bg-gray-400">Draft</Badge>;
-    }
   };
 
   return (
@@ -194,7 +188,7 @@ const ViewConfigurations = () => {
             </svg>
             <p className="text-lg font-medium text-gray-700">No configurations found</p>
             <p className="text-gray-500 mt-1">Get started by creating your first claim configuration</p>
-            <Button className="mt-4" onClick={() => navigate('/config')}>
+            <Button className="mt-4" onClick={() => navigate('/')}>
               Create Configuration
             </Button>
           </div>
@@ -211,7 +205,6 @@ const ViewConfigurations = () => {
                         <CardTitle className="text-lg font-semibold">{config.categoryDisplay} - {config.serviceDisplay}</CardTitle>
                         <CardDescription>ID: {config.id}</CardDescription>
                       </div>
-                      {getStatusBadge(config)}
                     </div>
                   </CardHeader>
                   <CardContent className="pt-4">
