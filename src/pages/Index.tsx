@@ -226,6 +226,9 @@ const Index = () => {
   const [availableFields, setAvailableFields] = useState<{fieldLabel: string, options?: string[]}[]>([]);
   const [selectedField, setSelectedField] = useState("");
   const [selectedValue, setSelectedValue] = useState("");
+  
+  // State for saving
+  const [isSaving, setIsSaving] = useState(false);
 
   // Handle category change
   const handleCategoryChange = (categoryValue: string) => {
@@ -969,9 +972,4 @@ const Index = () => {
                                         strokeLinecap="round" 
                                         strokeLinejoin="round" 
                                         strokeWidth={2} 
-                                        d="M5 13l4 4L19 7" 
-                                      />
-                                    </svg>
-                                  </div>
-                                )}
-                              </td>
+                                        d="M5 13l4 4L
