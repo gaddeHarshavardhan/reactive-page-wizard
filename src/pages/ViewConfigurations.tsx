@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -23,9 +24,16 @@ interface Document {
   allowedFormat: string[];
 }
 
+interface ActionCondition {
+  field: string;
+  operator: string;
+  value: string;
+}
+
 interface Action {
   option: string;
   stage: string;
+  conditions?: ActionCondition[];
 }
 
 interface Stage {
@@ -139,7 +147,8 @@ const ViewConfigurations = () => {
         })),
         actions: stage.actions.map(action => ({
           action: capitalizeFirstLetter(action.option),
-          nextStage: action.stage || ""
+          nextStage: action.stage || "",
+          conditions: action.conditions || []
         }))
       }))
     };
@@ -168,6 +177,11 @@ const ViewConfigurations = () => {
     });
     
     return { stageCount, fieldCount, documentCount };
+  };
+
+  // Helper to render condition text
+  const renderConditionText = (condition: ActionCondition) => {
+    return `${condition.field} ${condition.operator} ${condition.value}`;
   };
 
   return (
@@ -225,7 +239,6 @@ const ViewConfigurations = () => {
                     <div className="flex justify-between items-start">
                       <div>
                         <CardTitle className="text-lg font-semibold">{config.categoryDisplay} - {config.serviceDisplay}</CardTitle>
-                        <CardDescription>ID: {config.id}</CardDescription>
                       </div>
                     </div>
                   </CardHeader>
@@ -284,7 +297,6 @@ const ViewConfigurations = () => {
                     {selectedConfig.categoryDisplay} - {selectedConfig.serviceDisplay}
                   </span>
                 ) : 'Configuration Details'}
-                <Badge className="ml-2 bg-blue-100 text-blue-800 hover:bg-blue-100">ID: {selectedConfig?.id}</Badge>
               </DialogTitle>
             </DialogHeader>
             
@@ -440,6 +452,7 @@ const ViewConfigurations = () => {
                               <TableRow>
                                 <TableHead>Option</TableHead>
                                 <TableHead>Next Stage</TableHead>
+                                <TableHead>Conditions</TableHead>
                               </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -451,6 +464,19 @@ const ViewConfigurations = () => {
                                       <Badge className="bg-blue-100 text-blue-800">{action.stage}</Badge>
                                     ) : (
                                       <Badge variant="outline" className="text-gray-500">End of Flow</Badge>
+                                    )}
+                                  </TableCell>
+                                  <TableCell>
+                                    {action.conditions && action.conditions.length > 0 ? (
+                                      <div className="space-y-1">
+                                        {action.conditions.map((condition, i) => (
+                                          <Badge key={i} variant="outline" className="block text-xs">
+                                            {renderConditionText(condition)}
+                                          </Badge>
+                                        ))}
+                                      </div>
+                                    ) : (
+                                      <span className="text-gray-400">—</span>
                                     )}
                                   </TableCell>
                                 </TableRow>
