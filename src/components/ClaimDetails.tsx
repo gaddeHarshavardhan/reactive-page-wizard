@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   Card, 
@@ -612,6 +611,12 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
   const displayDate = claimData.createdDate.split('T')[0] || "Not Available";
   const displayContact = claimData.contact || "Not Available";
 
+  // Get the current stage configuration
+  const currentStageConfig = configurationArray.find(stage => stage.stageName === activeTab);
+  
+  // Check if documents exist for the current stage
+  const hasDocuments = currentStageConfig?.documents && currentStageConfig.documents.length > 0;
+
   return (
     <div className="space-y-6 bg-gray-50 p-6 rounded-lg">
       {/* Claim Header */}
@@ -754,12 +759,12 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
                 </div>
               )}
               
-              {/* Documents Section - Dynamically rendered from configuration */}
-              {configurationArray.find(stage => stage.stageName === activeTab)?.documents && (
+              {/* Documents Section - Only show if documents exist */}
+              {hasDocuments && (
                 <div className="mb-8">
                   <h4 className="text-lg font-medium mb-4 text-blue-700">Required Documents</h4>
                   
-                  {configurationArray.find(stage => stage.stageName === activeTab)?.documents?.map(doc => (
+                  {currentStageConfig?.documents?.map(doc => (
                     <div key={doc.name} className="border border-gray-200 rounded-lg p-4 mb-4 hover:border-blue-300 transition-colors">
                       <div className="flex justify-between items-center">
                         <div>
