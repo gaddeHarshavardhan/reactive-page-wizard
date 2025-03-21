@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import ClaimStage from '@/components/ClaimStage';
 import StageConnector from '@/components/StageConnector';
 import FormFieldRow from '@/components/FormFieldRow';
@@ -39,6 +40,7 @@ interface Action {
 const formatOptions = ["PDF", "JPG", "PNG", "DOC", "DOCX", "XLS", "XLSX", "TXT"];
 
 const Index = () => {
+  const navigate = useNavigate();
   const [activeStage, setActiveStage] = useState('Claim Submission');
   const [stages, setStages] = useState(['Claim Submission', 'Document Upload', 'Claim Assessment']);
   
@@ -359,6 +361,72 @@ const Index = () => {
         ...newDocument,
         format: [...newDocument.format, format]
       });
+    }
+  };
+
+  // Function to save configuration and navigate to form
+  const handleSaveAndPreview = async () => {
+    setIsSaving(true);
+    
+    // Transform the data into the requested structure
+    const transformedData = {
+      stages: stages.map(stageName => {
+        return {
+          stageName: stageName,
+          fields: formFields[stageName]?.map(field => ({
+            name: field.fieldLabel,
+            type: field.fieldType.toLowerCase(),
+            mandatory: field.mandatory,
+            validation: field.validation
+          })) || [],
+          documents: documents[stageName]?.map(doc => ({
+            name: doc.documentType,
+            mandatory: doc.mandatory,
+            maxSize: doc.maxSize,
+            allowedFormat: doc.format
+          })) || [],
+          actions: actions[stageName]?.map(action => {
+            const actionData: {
+              option: string;
+              stage?: string;
+              buttonLabel?: string;
+              condition?: string;
+            } = {
+              option: action.action.toLowerCase(),
+              buttonLabel: action.buttonLabel,
+              condition: action.condition
+            };
+            
+            // Only include stage if it's specified and not an exit action
+            if (action.nextStage && !action.nextStage.startsWith("Exit")) {
+              actionData.stage = action.nextStage;
+            }
+            
+            return actionData;
+          }) || []
+        };
+      })
+    };
+    
+    try {
+      // In a real app, this would save to an API
+      console.log('Configuration for preview:', transformedData);
+      
+      // Store in localStorage to simulate persistence
+      localStorage.setItem('claimConfig', JSON.stringify(transformedData));
+      
+      setIsSaving(false);
+      toast.success("Configuration saved and ready for preview");
+      
+      // Navigate to the claim form page
+      setTimeout(() => {
+        navigate('/claim-form');
+      }, 1000);
+      
+    } catch (error) {
+      console.error("Error saving configuration:", error);
+      setIsSaving(false);
+      toast.error("Error saving configuration");
     }
   };
 
@@ -876,38 +944,4 @@ const Index = () => {
             </div>
             
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsAddActionOpen(false)}>Cancel</Button>
-              <Button onClick={handleAddAction}>Add Action</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Action Buttons */}
-        <div className="flex justify-end space-x-4 mt-8 animate-fade-in">
-          <button className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors">
-            Cancel
-          </button>
-          <button 
-            className="px-6 py-2 bg-claims-blue text-white rounded-md hover:bg-claims-blue-dark transition-colors flex items-center"
-            onClick={handleSaveConfiguration}
-            disabled={isSaving}
-          >
-            {isSaving ? (
-              <>
-                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Saving...
-              </>
-            ) : (
-              "Save Configuration"
-            )}
-          </button>
-        </div>
-      </main>
-    </div>
-  );
-};
-
-export default Index;
+              <Button variant="outline" onClick={() => setIsAddActionOpen(false)}>Cancel</Button
