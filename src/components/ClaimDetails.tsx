@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
   Card, 
@@ -24,10 +25,21 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { CircleCheck, Circle, Clock, Check, ArrowRight, Calendar, Upload, Save } from 'lucide-react';
+import { CircleCheck, Circle, Clock, Check, ArrowRight, Calendar, Upload, Save, AlertCircle } from 'lucide-react';
 import FormFieldRow from './FormFieldRow';
 import DocumentRow from './DocumentRow';
 import { toast } from 'sonner';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import * as z from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
 
 interface ClaimDetailsProps {
   claimId?: string;
@@ -99,6 +111,7 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
   const [selectedIssueType, setSelectedIssueType] = useState<string>("");
   const [isSaving, setIsSaving] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
 
   useEffect(() => {
     const fetchData = async () => {
@@ -294,11 +307,53 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
         [fieldName]: value
       }
     }));
+    
+    // Clear validation error for this field when user starts typing
+    if (validationErrors[fieldName]) {
+      setValidationErrors(prev => {
+        const newErrors = {...prev};
+        delete newErrors[fieldName];
+        return newErrors;
+      });
+    }
   };
 
   const handleIssueTypeChange = (value: string) => {
     setSelectedIssueType(value);
     handleFormChange(activeTab, 'issue_type', value);
+  };
+
+  // Validate mandatory fields
+  const validateFields = (): boolean => {
+    if (!claimConfig || !activeTab) return true;
+    
+    const currentStageConfig = claimConfig.configuration.find(stage => stage.stageName === activeTab);
+    if (!currentStageConfig || !currentStageConfig.fields) return true;
+    
+    const errors: {[key: string]: string} = {};
+    let isValid = true;
+    
+    // Check each mandatory field
+    currentStageConfig.fields.forEach(field => {
+      if (field.mandatory) {
+        const fieldValue = formValues[activeTab]?.[field.name];
+        if (fieldValue === undefined || fieldValue === '' || fieldValue === null) {
+          errors[field.name] = `${field.name} is required`;
+          isValid = false;
+        }
+      }
+    });
+    
+    // Check mandatory documents if any
+    currentStageConfig.documents?.forEach(doc => {
+      if (doc.mandatory === "true") {
+        // Here you would check if the document has been uploaded
+        // This is a placeholder for document validation
+      }
+    });
+    
+    setValidationErrors(errors);
+    return isValid;
   };
 
   const handleSaveForLater = async () => {
@@ -332,6 +387,12 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
 
   const handleSubmit = async () => {
     if (!claimData) return;
+    
+    // Validate fields before submission
+    if (!validateFields()) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
     
     setIsSubmitting(true);
     try {
@@ -395,7 +456,7 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
   return (
     <div className="space-y-6 bg-gray-50 p-6 rounded-lg">
       {/* Claim Header */}
-      <div className="bg-claims-blue text-white p-6 rounded-t-lg">
+      <div className="bg-gradient-to-r from-blue-600 to-blue-400 text-white p-6 rounded-t-lg shadow-md">
         <h2 className="text-2xl font-semibold">{claimData.claimType}</h2>
       </div>
       
@@ -425,7 +486,7 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
             <span className="ml-2">
               <span className={`${
                 isClaimCompleted() ? "bg-green-500" : "bg-blue-500"
-              } text-white px-4 py-1 rounded-full text-sm`}>
+              } text-white px-4 py-1 rounded-full text-sm font-medium shadow-sm`}>
                 {claimData.status}
               </span>
             </span>
@@ -445,12 +506,12 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
               <div 
                 className={`flex flex-col items-center ${
                   isStageCompleted(stage.stageName) || stage.stageName === claimData.currentStage 
-                    ? "cursor-pointer" 
-                    : "cursor-not-allowed"
+                    ? "cursor-pointer transition-transform hover:scale-105" 
+                    : "cursor-not-allowed opacity-70"
                 }`}
                 onClick={() => handleStageSelect(stage.stageName)}
               >
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all shadow-sm ${
                   isClaimCompleted() || index < currentStageIndex
                     ? 'bg-green-500 text-white' 
                     : index === currentStageIndex 
@@ -464,14 +525,14 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
                   )}
                 </div>
                 <span className={`text-sm mt-2 text-center max-w-[120px] ${
-                  activeTab === stage.stageName ? "font-bold" : ""
+                  activeTab === stage.stageName ? "font-bold text-blue-600" : ""
                 }`}>
                   {stage.stageName}
                 </span>
               </div>
               
               {index < configurationArray.length - 1 && (
-                <div className={`h-[2px] w-24 mx-2 ${
+                <div className={`h-[2px] w-24 mx-2 transition-colors ${
                   isClaimCompleted() || index < currentStageIndex 
                     ? 'bg-green-500' 
                     : 'bg-gray-300'
@@ -488,7 +549,7 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
       <div className="bg-white p-6 rounded-lg shadow-sm">
         {activeTab && configurationArray.find(stage => stage.stageName === activeTab) && (
           <div>
-            <h3 className="text-xl font-medium mb-6">
+            <h3 className="text-xl font-medium mb-6 text-blue-700 flex items-center">
               {activeTab}
               {isStageCompleted(activeTab) && (
                 <span className="ml-3 text-green-500 text-sm inline-flex items-center">
@@ -502,8 +563,6 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
               {/* Form Fields Section */}
               {configurationArray.find(stage => stage.stageName === activeTab)?.fields && (
                 <div className="mb-8">
-                  <h4 className="text-lg font-medium mb-4">Form Fields</h4>
-                  
                   <div className="space-y-6">
                     {configurationArray.find(stage => stage.stageName === activeTab)?.fields?.map(field => (
                       <div key={field.name} className="space-y-2">
@@ -516,54 +575,63 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
                           )}
                         </div>
                         
-                        {field.type === 'text' && (
-                          <Input
-                            id={field.name}
-                            type="text"
-                            value={formValues[activeTab]?.[field.name] || ''}
-                            onChange={(e) => handleFormChange(activeTab, field.name, e.target.value)}
-                            className="w-full p-3 border border-gray-300 rounded-md"
-                            readOnly={isStageCompleted(activeTab) || isClaimCompleted()}
-                          />
-                        )}
-                        
-                        {field.type === 'date' && (
-                          <div className="relative">
+                        <div className="relative">
+                          {field.type === 'text' && (
                             <Input
                               id={field.name}
-                              type="date"
+                              type="text"
                               value={formValues[activeTab]?.[field.name] || ''}
                               onChange={(e) => handleFormChange(activeTab, field.name, e.target.value)}
-                              className="w-full p-3 border border-gray-300 rounded-md"
+                              className={`w-full p-3 border ${validationErrors[field.name] ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'} rounded-md`}
                               readOnly={isStageCompleted(activeTab) || isClaimCompleted()}
                             />
-                            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                              <Calendar className="w-5 h-5 text-gray-400" />
+                          )}
+                          
+                          {field.type === 'date' && (
+                            <div className="relative">
+                              <Input
+                                id={field.name}
+                                type="date"
+                                value={formValues[activeTab]?.[field.name] || ''}
+                                onChange={(e) => handleFormChange(activeTab, field.name, e.target.value)}
+                                className={`w-full p-3 border ${validationErrors[field.name] ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'} rounded-md`}
+                                readOnly={isStageCompleted(activeTab) || isClaimCompleted()}
+                              />
+                              <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                <Calendar className="w-5 h-5 text-gray-400" />
+                              </div>
                             </div>
-                          </div>
-                        )}
-                        
-                        {field.type === 'number' && (
-                          <Input
-                            id={field.name}
-                            type="number"
-                            value={formValues[activeTab]?.[field.name] || ''}
-                            onChange={(e) => handleFormChange(activeTab, field.name, e.target.value)}
-                            className="w-full p-3 border border-gray-300 rounded-md"
-                            readOnly={isStageCompleted(activeTab) || isClaimCompleted()}
-                          />
-                        )}
-                        
-                        {field.type === 'textarea' && (
-                          <Textarea
-                            id={field.name}
-                            placeholder="Enter description..."
-                            value={formValues[activeTab]?.[field.name] || ''}
-                            onChange={(e) => handleFormChange(activeTab, field.name, e.target.value)}
-                            className="w-full p-3 border border-gray-300 rounded-md min-h-[120px]"
-                            readOnly={isStageCompleted(activeTab) || isClaimCompleted()}
-                          />
-                        )}
+                          )}
+                          
+                          {field.type === 'number' && (
+                            <Input
+                              id={field.name}
+                              type="number"
+                              value={formValues[activeTab]?.[field.name] || ''}
+                              onChange={(e) => handleFormChange(activeTab, field.name, e.target.value)}
+                              className={`w-full p-3 border ${validationErrors[field.name] ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'} rounded-md`}
+                              readOnly={isStageCompleted(activeTab) || isClaimCompleted()}
+                            />
+                          )}
+                          
+                          {field.type === 'textarea' && (
+                            <Textarea
+                              id={field.name}
+                              placeholder="Enter description..."
+                              value={formValues[activeTab]?.[field.name] || ''}
+                              onChange={(e) => handleFormChange(activeTab, field.name, e.target.value)}
+                              className={`w-full p-3 border ${validationErrors[field.name] ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'} rounded-md min-h-[120px]`}
+                              readOnly={isStageCompleted(activeTab) || isClaimCompleted()}
+                            />
+                          )}
+                          
+                          {validationErrors[field.name] && (
+                            <div className="text-red-500 text-sm mt-1 flex items-center">
+                              <AlertCircle className="h-4 w-4 mr-1" />
+                              {validationErrors[field.name]}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -573,10 +641,10 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
               {/* Documents Section */}
               {configurationArray.find(stage => stage.stageName === activeTab)?.documents && (
                 <div className="mb-8">
-                  <h4 className="text-lg font-medium mb-4">Required Documents</h4>
+                  <h4 className="text-lg font-medium mb-4 text-blue-700">Required Documents</h4>
                   
                   {configurationArray.find(stage => stage.stageName === activeTab)?.documents?.map(doc => (
-                    <div key={doc.name} className="border border-gray-200 rounded-lg p-4 mb-4">
+                    <div key={doc.name} className="border border-gray-200 rounded-lg p-4 mb-4 hover:border-blue-300 transition-colors">
                       <div className="flex justify-between items-center">
                         <div>
                           <div className="flex items-center mb-1">
@@ -590,7 +658,7 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
                         <div className="flex items-center">
                           <Button 
                             variant="outline" 
-                            className="bg-gray-100 mr-2"
+                            className="bg-gray-100 mr-2 hover:bg-blue-50"
                             disabled={isStageCompleted(activeTab) || isClaimCompleted()}
                           >
                             Choose File
@@ -611,7 +679,7 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
                     variant="outline" 
                     onClick={handleSaveForLater}
                     disabled={isSaving || isClaimCompleted()}
-                    className="border-gray-300 text-gray-700"
+                    className="border-gray-300 text-gray-700 hover:bg-gray-50"
                   >
                     {isSaving ? 'Saving...' : 'Save for Later'}
                     {!isSaving && <Save className="ml-2 h-4 w-4" />}
@@ -620,7 +688,7 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
                   <Button 
                     onClick={handleSubmit}
                     disabled={isSubmitting || isClaimCompleted()}
-                    className="bg-claims-blue hover:bg-claims-blue-dark"
+                    className="bg-gradient-to-r from-blue-600 to-blue-400 hover:from-blue-700 hover:to-blue-500 transition-all"
                   >
                     {isSubmitting ? 'Submitting...' : 'Submit'}
                     {!isSubmitting && <ArrowRight className="ml-2 h-4 w-4" />}
