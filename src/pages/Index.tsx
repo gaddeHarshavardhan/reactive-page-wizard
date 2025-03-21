@@ -38,7 +38,7 @@ interface Action {
   nextStage: string;
 }
 
-const formatOptions = ["PDF", "JPG", "PNG", "DOC", "DOCX", "XLS", "XLSX", "TXT"];
+const formatOptions = ["PDF", "JPG", "PNG", "TXT"];
 
 // Predefined lists for categories and services
 const categoryOptions = ["PE", "HA", "Motor"];
