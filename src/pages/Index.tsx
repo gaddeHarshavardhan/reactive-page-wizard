@@ -548,7 +548,7 @@ const Index = () => {
     }
   };
 
-  // Handle start configuration button - Updated to load default template
+  // Handle start configuration button - Re-enabled to load default template
   const handleStartConfiguration = () => {
     if (!selectedCategory || !selectedService) {
       toast.error("Please select both category and service");
@@ -557,7 +557,15 @@ const Index = () => {
     
     setShowConfigSection(true);
     
-    // Load default template instead of starting with empty configuration
+    // Load default template
+    loadDefaultTemplate();
+    
+    toast.success("Configuration template loaded");
+  };
+
+  // Helper function to load the default template - Re-enabled functionality
+  const loadDefaultTemplate = () => {
+    // Load default stages
     setStages([...defaultStages]);
     
     // Set up form fields, documents, and actions from defaults
@@ -579,13 +587,6 @@ const Index = () => {
     if (defaultStages.length > 0) {
       setActiveStage(defaultStages[0]);
     }
-    
-    toast.success("Configuration template loaded");
-  };
-
-  // Helper function to load the default template - removed this functionality
-  const loadDefaultTemplate = () => {
-    // No longer loading default template
   };
 
   // Function to save configuration
@@ -954,4 +955,3 @@ const Index = () => {
                             <th className="w-1/12 rounded-tr-md p-3">Actions</th>
                           </tr>
                         </thead>
-                        <tbody>
