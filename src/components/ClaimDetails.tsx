@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   Card, 
@@ -55,6 +54,7 @@ interface ClaimDetailsProps {
     status: string;
     contact?: string;
     currentStage: string;
+    category?: string; // Added the category field
     stageData: {
       [key: string]: any;
     }
@@ -97,6 +97,7 @@ interface ClaimData {
   currentStage: string;
   customerId?: string;
   productId?: string;
+  category?: string; // Added the category field
   stageData: {
     [key: string]: any;
   }
@@ -117,8 +118,29 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
     const fetchData = async () => {
       setLoading(true);
       try {
-        // Fetch claim configuration
-        const configResponse = await fetch('http://localhost:8081/api/configs/PE');
+        // First, fetch claim data if not provided
+        let claimDataResponse;
+        if (initialClaimData) {
+          console.log("Using provided claim data:", initialClaimData);
+          claimDataResponse = initialClaimData;
+          setClaimData(initialClaimData);
+        } else {
+          // Fetch claim data from API
+          const claimResponse = await fetch(`http://localhost:8081/api/claims/${claimId}`);
+          if (!claimResponse.ok) {
+            throw new Error('Failed to fetch claim data');
+          }
+          claimDataResponse = await claimResponse.json();
+          console.log("Fetched claim data:", claimDataResponse);
+          setClaimData(claimDataResponse);
+        }
+        
+        // Extract category from claim data, default to "PE" if not available
+        const category = claimDataResponse.category || "PE";
+        console.log("Using category for config fetch:", category);
+        
+        // Fetch claim configuration using the category from claim data
+        const configResponse = await fetch(`http://localhost:8081/api/configs/${category}`);
         if (!configResponse.ok) {
           throw new Error('Failed to fetch claim configuration');
         }
@@ -126,46 +148,17 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
         console.log("Config data:", configData);
         setClaimConfig(configData);
         
-        // Fetch claim data or use provided data
-        if (initialClaimData) {
-          console.log("Using provided claim data:", initialClaimData);
-          setClaimData(initialClaimData);
+        // Initialize form values from claim data
+        if (claimDataResponse.stageData) {
+          setFormValues(claimDataResponse.stageData);
           
-          // Initialize form values from claim data
-          if (initialClaimData.stageData) {
-            setFormValues(initialClaimData.stageData);
-            
-            // Set the active tab to the current stage
-            setActiveTab(initialClaimData.currentStage || "");
-            
-            // Set selected issue type if available
-            const stageDataKey = initialClaimData.currentStage;
-            if (stageDataKey && initialClaimData.stageData[stageDataKey]?.issue_type) {
-              setSelectedIssueType(initialClaimData.stageData[stageDataKey].issue_type);
-            }
-          }
-        } else {
-          // Fetch claim data from API
-          const claimResponse = await fetch(`http://localhost:8081/api/claims/${claimId}`);
-          if (!claimResponse.ok) {
-            throw new Error('Failed to fetch claim data');
-          }
-          const claimDataResponse = await claimResponse.json();
-          console.log("Fetched claim data:", claimDataResponse);
-          setClaimData(claimDataResponse);
+          // Set the active tab to the current stage
+          setActiveTab(claimDataResponse.currentStage || "");
           
-          // Initialize form values from claim data
-          if (claimDataResponse.stageData) {
-            setFormValues(claimDataResponse.stageData);
-            
-            // Set the active tab to the current stage
-            setActiveTab(claimDataResponse.currentStage || "");
-            
-            // Set selected issue type if available
-            const stageDataKey = claimDataResponse.currentStage;
-            if (stageDataKey && claimDataResponse.stageData[stageDataKey]?.issue_type) {
-              setSelectedIssueType(claimDataResponse.stageData[stageDataKey].issue_type);
-            }
+          // Set selected issue type if available
+          const stageDataKey = claimDataResponse.currentStage;
+          if (stageDataKey && claimDataResponse.stageData[stageDataKey]?.issue_type) {
+            setSelectedIssueType(claimDataResponse.stageData[stageDataKey].issue_type);
           }
         }
       } catch (error) {
@@ -237,6 +230,7 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
           status: "New",
           contact: "+1 (555) 123-4567",
           currentStage: "Document Upload",
+          category: "PE", // Add default category
           stageData: {
             "Document Upload": {
               dateOfIncident: "2025-03-15"
