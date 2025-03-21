@@ -2,7 +2,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Settings, FileText } from 'lucide-react';
+import { Settings, Search } from 'lucide-react';
 import { toast } from 'sonner';
 
 const Dashboard = () => {
@@ -44,26 +44,19 @@ const Dashboard = () => {
           <div className="bg-white p-8 rounded-lg shadow-sm border border-gray-200 transition-all hover:shadow-md">
             <div className="mb-4 flex justify-center">
               <div className="w-16 h-16 rounded-full bg-claims-green flex items-center justify-center text-white">
-                <FileText className="w-8 h-8" />
+                <Search className="w-8 h-8" />
               </div>
             </div>
-            <h2 className="text-xl font-medium text-center mb-3">Submit a Claim</h2>
+            <h2 className="text-xl font-medium text-center mb-3">View Claims</h2>
             <p className="text-gray-600 text-center mb-6">
-              Fill out and submit a claim form using the latest configuration. Your progress will be saved between stages.
+              Search and view submitted claims by their reference number to check status and details.
             </p>
             <div className="flex justify-center">
               <Button 
-                onClick={() => {
-                  const hasConfig = localStorage.getItem('claimConfig');
-                  if (hasConfig) {
-                    navigate('/claim-form');
-                  } else {
-                    toast.error('No claim configuration found. Please create one first.');
-                  }
-                }} 
+                onClick={() => navigate('/view-claims')} 
                 className="bg-claims-green hover:bg-green-600"
               >
-                Start New Claim
+                View Claims
               </Button>
             </div>
           </div>
