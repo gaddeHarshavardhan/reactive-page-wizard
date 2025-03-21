@@ -41,13 +41,11 @@ interface Action {
 const formatOptions = ["PDF", "JPG", "PNG", "DOC", "DOCX", "XLS", "XLSX", "TXT"];
 
 // Predefined lists for categories and services
-const categoryOptions = ["Insurance", "Banking", "Healthcare", "Telecom", "Retail"];
+const categoryOptions = ["PE", "HA", "Motor"];
 const serviceOptions: Record<string, string[]> = {
-  "Insurance": ["Auto Insurance", "Home Insurance", "Life Insurance", "Health Insurance", "Travel Insurance"],
-  "Banking": ["Credit Card", "Personal Loan", "Mortgage", "Savings Account", "Current Account"],
-  "Healthcare": ["Medical Claim", "Prescription", "Lab Test", "Doctor Visit", "Hospital Stay"],
-  "Telecom": ["Mobile Plan", "Internet Service", "TV Service", "Device Protection", "Technical Support"],
-  "Retail": ["Product Return", "Product Replacement", "Warranty Claim", "Delivery Issue", "Billing Dispute"]
+  "PE": ["ADLD", "EW"],
+  "HA": ["EW", "PMS"],
+  "Motor": ["ADLD"]
 };
 
 const Index = () => {
