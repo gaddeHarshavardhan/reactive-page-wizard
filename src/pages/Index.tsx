@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ClaimStage from '@/components/ClaimStage';
@@ -29,6 +28,10 @@ interface Document {
 interface Action {
   action: string;
   nextStage: string;
+  condition?: {
+    field: string;
+    value: string;
+  };
 }
 
 // Default template data for quick start
@@ -128,6 +131,22 @@ const defaultActions: Record<string, Action[]> = {
     }
   ],
   "IC Decision": [
+    {
+      action: "Approve",
+      nextStage: "",
+      condition: {
+        field: "Insurance Decision",
+        value: "Approved"
+      }
+    },
+    {
+      action: "BER",
+      nextStage: "",
+      condition: {
+        field: "Insurance Decision",
+        value: "BER"
+      }
+    }
   ]
 };
 
@@ -195,15 +214,18 @@ const Index = () => {
     mandatory: false
   });
 
-  // State for add action dialog
+  // Updated state for add action dialog to include condition
   const [isAddActionOpen, setIsAddActionOpen] = useState(false);
   const [newAction, setNewAction] = useState<Action>({
     action: "Submit",
     nextStage: ""
   });
-
-  // State for saving configuration
-  const [isSaving, setIsSaving] = useState(false);
+  
+  // New state for condition selection
+  const [useCondition, setUseCondition] = useState(false);
+  const [availableFields, setAvailableFields] = useState<{fieldLabel: string, options?: string[]}[]>([]);
+  const [selectedField, setSelectedField] = useState("");
+  const [selectedValue, setSelectedValue] = useState("");
 
   // Handle category change
   const handleCategoryChange = (categoryValue: string) => {
@@ -505,17 +527,36 @@ const Index = () => {
     toast.success("Document removed");
   };
 
-  // Function to add a new action - removed next stage validation
+  // Updated add action handler to include condition
   const handleAddAction = () => {
+    if (!newAction.action.trim()) {
+      toast.error("Action name is required");
+      return;
+    }
+    
+    const actionToAdd: Action = { ...newAction };
+    
+    // Add condition if enabled
+    if (useCondition && selectedField && selectedValue) {
+      actionToAdd.condition = {
+        field: selectedField,
+        value: selectedValue
+      };
+    }
+    
     setActions({
       ...actions,
-      [activeStage]: [...(actions[activeStage] || []), newAction]
+      [activeStage]: [...(actions[activeStage] || []), actionToAdd]
     });
     
+    // Reset form
     setNewAction({
       action: "Submit",
       nextStage: ""
     });
+    setUseCondition(false);
+    setSelectedField("");
+    setSelectedValue("");
     
     setIsAddActionOpen(false);
     toast.success("Action added successfully");
@@ -660,6 +701,29 @@ const Index = () => {
       setIsSaving(false);
     }
   };
+
+  // Update available condition fields when active stage changes
+  useEffect(() => {
+    if (activeStage) {
+      // Get dropdown and radio button fields that have options
+      const fields = formFields[activeStage]?.filter(
+        field => (field.fieldType === "Dropdown" || field.fieldType === "Radio Buttons") && field.options && field.options.length > 0
+      ) || [];
+      
+      setAvailableFields(fields);
+    }
+  }, [activeStage, formFields]);
+
+  // Reset condition values when toggling condition use
+  useEffect(() => {
+    if (!useCondition) {
+      setSelectedField("");
+      setSelectedValue("");
+    } else if (availableFields.length > 0) {
+      setSelectedField(availableFields[0].fieldLabel);
+      setSelectedValue(availableFields[0].options?.[0] || "");
+    }
+  }, [useCondition, availableFields]);
 
   // Get available next stages (only stages after the current one)
   const getAvailableNextStages = () => {
@@ -911,288 +975,3 @@ const Index = () => {
                                   </div>
                                 )}
                               </td>
-                              <td className="p-4 text-center">
-                                <button 
-                                  onClick={() => handleRemoveDocument(index)}
-                                  className="text-red-500 hover:text-red-700"
-                                  aria-label="Remove document"
-                                >
-                                  <X size={18} />
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                          {documents[activeStage]?.length === 0 && (
-                            <tr>
-                              <td colSpan={4} className="p-4 text-center text-gray-500">
-                                No documents added yet. Click "Add Document" to get started.
-                              </td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    <button 
-                      onClick={() => setIsAddDocumentOpen(true)}
-                      className="mt-4 flex items-center px-4 py-2 text-sm bg-purple-50 border border-purple-200 rounded-md text-purple-600 hover:bg-purple-100 transition-colors"
-                    >
-                      <Plus size={16} className="mr-2" />
-                      Add Document
-                    </button>
-                  </div>
-                </div>
-
-                {/* Actions Section */}
-                <div className="bg-white rounded-lg border border-gray-200 mb-6 animate-fade-in-up shadow-md">
-                  <div className="p-6">
-                    <h3 className="text-xl font-medium mb-4 text-amber-700">Stage Actions</h3>
-                    <div className="overflow-x-auto">
-                      <table className="w-full claims-table">
-                        <thead>
-                          <tr className="bg-gradient-to-r from-amber-50 to-orange-50 text-gray-700">
-                            <th className="w-1/2 rounded-tl-md p-3">Action</th>
-                            <th className="w-1/3 p-3">Next Stage</th>
-                            <th className="w-1/12 rounded-tr-md p-3">Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {actions[activeStage]?.map((action, index) => (
-                            <tr key={index} className="border-t border-gray-200 animate-fade-in hover:bg-gray-50">
-                              <td className="p-4">{action.action}</td>
-                              <td className="p-4">{action.nextStage || "-"}</td>
-                              <td className="p-4 text-center">
-                                <button 
-                                  onClick={() => handleRemoveAction(index)}
-                                  className="text-red-500 hover:text-red-700"
-                                  aria-label="Remove action"
-                                >
-                                  <X size={18} />
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                          {actions[activeStage]?.length === 0 && (
-                            <tr>
-                              <td colSpan={3} className="p-4 text-center text-gray-500">
-                                No actions added yet. Click "Add Action" to get started.
-                              </td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    <button 
-                      onClick={() => setIsAddActionOpen(true)}
-                      className="mt-4 flex items-center px-4 py-2 text-sm bg-amber-50 border border-amber-200 rounded-md text-amber-600 hover:bg-amber-100 transition-colors"
-                    >
-                      <Plus size={16} className="mr-2" />
-                      Add Action
-                    </button>
-                  </div>
-                </div>
-
-                {/* Save Configuration Button */}
-                <div className="flex justify-end mb-8">
-                  <Button 
-                    onClick={handleSaveConfiguration}
-                    className="bg-gradient-to-r from-green-600 to-emerald-700 hover:from-green-700 hover:to-emerald-800 px-6 py-2 text-white font-medium shadow-md"
-                    disabled={isSaving}
-                  >
-                    {isSaving ? 'Saving...' : 'Save Configuration'}
-                  </Button>
-                </div>
-              </>
-            )}
-          </>
-        )}
-      </main>
-
-      {/* Add Field Dialog */}
-      <Dialog open={isAddFieldOpen} onOpenChange={setIsAddFieldOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Add New Field</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="fieldLabel">Field Label</Label>
-              <Input 
-                id="fieldLabel" 
-                value={newField.fieldLabel} 
-                onChange={(e) => setNewField({...newField, fieldLabel: e.target.value})} 
-                placeholder="e.g., Name, Date of Birth, etc."
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="fieldType">Field Type</Label>
-              <Select 
-                value={newField.fieldType} 
-                onValueChange={(value) => setNewField({...newField, fieldType: value, options: value === "Dropdown" || value === "Radio Buttons" ? [] : undefined})}
-              >
-                <SelectTrigger id="fieldType">
-                  <SelectValue placeholder="Select field type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Text">Text</SelectItem>
-                  <SelectItem value="Number">Number</SelectItem>
-                  <SelectItem value="Date">Date</SelectItem>
-                  <SelectItem value="Email">Email</SelectItem>
-                  <SelectItem value="Phone">Phone</SelectItem>
-                  <SelectItem value="Dropdown">Dropdown</SelectItem>
-                  <SelectItem value="Radio Buttons">Radio Buttons</SelectItem>
-                  <SelectItem value="Checkbox">Checkbox</SelectItem>
-                  <SelectItem value="Textarea">Textarea</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {(newField.fieldType === "Dropdown" || newField.fieldType === "Radio Buttons") && (
-              <div className="space-y-2 border rounded-md p-3 bg-gray-50">
-                <Label>Options</Label>
-                <div className="flex space-x-2">
-                  <Input 
-                    value={optionInput} 
-                    onChange={(e) => setOptionInput(e.target.value)} 
-                    placeholder="Enter option text"
-                  />
-                  <Button 
-                    onClick={handleAddOption}
-                    variant="outline"
-                    type="button"
-                    size="sm"
-                  >
-                    Add
-                  </Button>
-                </div>
-                {newField.options && newField.options.length > 0 && (
-                  <div className="mt-2">
-                    <div className="text-sm font-medium mb-1">Added Options:</div>
-                    <div className="flex flex-wrap gap-2">
-                      {newField.options.map((option, index) => (
-                        <div 
-                          key={index} 
-                          className="flex items-center bg-white border rounded-md px-2 py-1 text-sm"
-                        >
-                          {option}
-                          <button 
-                            className="ml-2 text-red-500 hover:text-red-700"
-                            onClick={() => handleRemoveOption(index)}
-                          >
-                            <X size={14} />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="mandatory" 
-                checked={newField.mandatory} 
-                onCheckedChange={(checked) => setNewField({...newField, mandatory: checked === true})}
-              />
-              <Label htmlFor="mandatory">Mandatory Field</Label>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddFieldOpen(false)}>Cancel</Button>
-            <Button onClick={handleAddField}>Add Field</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Add Document Dialog */}
-      <Dialog open={isAddDocumentOpen} onOpenChange={setIsAddDocumentOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Add Required Document</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="documentType">Document Type</Label>
-              <Input 
-                id="documentType" 
-                value={newDocument.documentType} 
-                onChange={(e) => setNewDocument({...newDocument, documentType: e.target.value})} 
-                placeholder="e.g., ID Proof, Medical Report, etc."
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Allowed Formats</Label>
-              <div className="flex flex-wrap gap-3">
-                {formatOptions.map(format => (
-                  <div key={format} className="flex items-center space-x-2">
-                    <Checkbox 
-                      id={`format-${format}`} 
-                      checked={newDocument.format.includes(format)} 
-                      onCheckedChange={() => toggleFormat(format)}
-                    />
-                    <Label htmlFor={`format-${format}`}>{format}</Label>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="docMandatory" 
-                checked={newDocument.mandatory} 
-                onCheckedChange={(checked) => setNewDocument({...newDocument, mandatory: checked === true})}
-              />
-              <Label htmlFor="docMandatory">Mandatory Document</Label>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddDocumentOpen(false)}>Cancel</Button>
-            <Button onClick={handleAddDocument}>Add Document</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Add Action Dialog */}
-      <Dialog open={isAddActionOpen} onOpenChange={setIsAddActionOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Add Stage Action</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="actionName">Action Name</Label>
-              <Input 
-                id="actionName" 
-                value={newAction.action} 
-                onChange={(e) => setNewAction({...newAction, action: e.target.value})} 
-                placeholder="e.g., Submit, Approve, Reject, etc."
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="nextStage">Next Stage</Label>
-              <Select 
-                value={newAction.nextStage} 
-                onValueChange={(value) => setNewAction({...newAction, nextStage: value})}
-              >
-                <SelectTrigger id="nextStage">
-                  <SelectValue placeholder="Select next stage" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">None</SelectItem>
-                  {getAvailableNextStages().map(stage => (
-                    <SelectItem key={stage} value={stage}>{stage}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddActionOpen(false)}>Cancel</Button>
-            <Button onClick={handleAddAction}>Add Action</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-};
-
-export default Index;
