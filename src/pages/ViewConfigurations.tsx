@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { ChevronLeft, Eye, Edit, Download, Calendar, FileText, Layers } from 'lucide-react';
+import { ChevronLeft, Eye, Edit, FileText, Layers } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -121,7 +122,7 @@ const ViewConfigurations = () => {
   const handleEditConfig = (config: Configuration) => {
     // Store the configuration in localStorage to be loaded by the editor
     localStorage.setItem('editConfig', JSON.stringify(config));
-    navigate('/');
+    navigate('/config');
     toast.success('Configuration loaded for editing');
   };
 
@@ -145,7 +146,7 @@ const ViewConfigurations = () => {
     const { stageCount, fieldCount } = getCounts(config);
     
     if (stageCount > 2 && fieldCount > 5) {
-      return <Badge className="bg-green-500">Complete</Badge>;
+      return <Badge className="bg-amber-500">In Progress</Badge>;
     } else if (stageCount > 0) {
       return <Badge className="bg-amber-500">In Progress</Badge>;
     } else {
@@ -154,15 +155,15 @@ const ViewConfigurations = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 p-6">
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center mb-8">
-          <Button variant="ghost" onClick={() => navigate(-1)} className="mr-2">
+          <Button variant="ghost" onClick={() => navigate('/')} className="mr-2">
             <ChevronLeft className="h-4 w-4 mr-2" />
-            Back
+            Back to Dashboard
           </Button>
           <div>
-            <h1 className="text-2xl font-bold">Configuration Manager</h1>
+            <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-700">Configuration Manager</h1>
             <p className="text-gray-500 mt-1">View and manage your claim configurations</p>
           </div>
         </div>
@@ -193,7 +194,7 @@ const ViewConfigurations = () => {
             </svg>
             <p className="text-lg font-medium text-gray-700">No configurations found</p>
             <p className="text-gray-500 mt-1">Get started by creating your first claim configuration</p>
-            <Button className="mt-4" onClick={() => navigate('/')}>
+            <Button className="mt-4" onClick={() => navigate('/config')}>
               Create Configuration
             </Button>
           </div>
@@ -203,11 +204,11 @@ const ViewConfigurations = () => {
               const { stageCount, fieldCount, documentCount } = getCounts(config);
               
               return (
-                <Card key={config.id} className="overflow-hidden transition-all hover:shadow-md">
+                <Card key={config.id} className="overflow-hidden transition-all hover:shadow-md border border-gray-200">
                   <CardHeader className="pb-2 bg-gradient-to-r from-blue-50 to-indigo-50">
                     <div className="flex justify-between items-start">
                       <div>
-                        <CardTitle className="text-lg">{config.categoryDisplay} - {config.serviceDisplay}</CardTitle>
+                        <CardTitle className="text-lg font-semibold">{config.categoryDisplay} - {config.serviceDisplay}</CardTitle>
                         <CardDescription>ID: {config.id}</CardDescription>
                       </div>
                       {getStatusBadge(config)}
@@ -226,7 +227,7 @@ const ViewConfigurations = () => {
                         <span className="text-xs text-gray-500">Fields</span>
                       </div>
                       <div className="flex flex-col items-center p-2 bg-gray-50 rounded-md">
-                        <Calendar className="h-4 w-4 text-purple-500 mb-1" />
+                        <FileText className="h-4 w-4 text-purple-500 mb-1" />
                         <span className="font-medium">{documentCount}</span>
                         <span className="text-xs text-gray-500">Documents</span>
                       </div>
@@ -251,14 +252,6 @@ const ViewConfigurations = () => {
                         <Edit className="h-3.5 w-3.5 mr-1" />
                         Edit
                       </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="ml-2 text-gray-500"
-                        title="Download configuration"
-                      >
-                        <Download className="h-3.5 w-3.5" />
-                      </Button>
                     </div>
                   </CardContent>
                 </Card>
@@ -273,8 +266,7 @@ const ViewConfigurations = () => {
               <DialogTitle className="flex items-center">
                 {selectedConfig ? (
                   <span>
-                    {selectedConfig.categoryDisplay || categoryMap[selectedConfig.categoryName] || selectedConfig.categoryName} - 
-                    {' '}{selectedConfig.serviceDisplay || serviceMap[selectedConfig.serviceName] || selectedConfig.serviceName}
+                    {selectedConfig.categoryDisplay} - {selectedConfig.serviceDisplay}
                   </span>
                 ) : 'Configuration Details'}
                 <Badge className="ml-2 bg-blue-100 text-blue-800 hover:bg-blue-100">ID: {selectedConfig?.id}</Badge>
@@ -286,11 +278,11 @@ const ViewConfigurations = () => {
                 <div className="flex justify-between mb-4">
                   <div>
                     <h3 className="text-sm font-medium text-gray-500">Category</h3>
-                    <p>{selectedConfig.categoryDisplay || categoryMap[selectedConfig.categoryName] || selectedConfig.categoryName}</p>
+                    <p>{selectedConfig.categoryDisplay}</p>
                   </div>
                   <div>
                     <h3 className="text-sm font-medium text-gray-500">Service</h3>
-                    <p>{selectedConfig.serviceDisplay || serviceMap[selectedConfig.serviceName] || selectedConfig.serviceName}</p>
+                    <p>{selectedConfig.serviceDisplay}</p>
                   </div>
                   <div>
                     <h3 className="text-sm font-medium text-gray-500">Stages</h3>
@@ -378,7 +370,7 @@ const ViewConfigurations = () => {
                       {/* Documents Section */}
                       <div className="rounded-md border">
                         <div className="bg-gray-50 p-3 font-medium flex items-center">
-                          <Download className="h-4 w-4 mr-2 text-purple-500" />
+                          <FileText className="h-4 w-4 mr-2 text-purple-500" />
                           Required Documents
                           <Badge className="ml-2 bg-purple-100 text-purple-800">{stage.documents.length}</Badge>
                         </div>
