@@ -36,11 +36,12 @@ interface ClaimDetailsProps {
     customerId?: string;
     productId?: string;
     srId: string;
-    customerName: string;
-    deviceMake: string;
-    dateCreated: string;
+    customerName?: string;
+    deviceMake?: string;
+    dateCreated?: string;
+    createdDate?: string;
     status: string;
-    contact: string;
+    contact?: string;
     currentStage: string;
     stageData: {
       [key: string]: any;
@@ -75,11 +76,12 @@ interface ClaimConfig {
 interface ClaimData {
   claimType: string;
   srId: string;
-  customerName: string;
-  deviceMake: string;
-  dateCreated: string;
+  customerName?: string;
+  deviceMake?: string;
+  dateCreated?: string;
+  createdDate?: string;
   status: string;
-  contact: string;
+  contact?: string;
   currentStage: string;
   customerId?: string;
   productId?: string;
@@ -106,26 +108,49 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
           throw new Error('Failed to fetch claim configuration');
         }
         const configData = await configResponse.json();
+        console.log("Config data:", configData);
         setClaimConfig(configData);
         
-        // Fetch claim data
-        const claimResponse = await fetch(`http://localhost:8081/api/claims/${claimId}`);
-        if (!claimResponse.ok) {
-          throw new Error('Failed to fetch claim data');
-        }
-        const claimDataResponse = await claimResponse.json();
-        setClaimData(claimDataResponse);
-        
-        // Initialize form values from claim data
-        if (claimDataResponse.stageData) {
-          setFormValues(claimDataResponse.stageData);
+        // Fetch claim data or use provided data
+        if (initialClaimData) {
+          console.log("Using provided claim data:", initialClaimData);
+          setClaimData(initialClaimData);
           
-          // Set the active tab to the current stage
-          setActiveTab(claimDataResponse.currentStage || "");
+          // Initialize form values from claim data
+          if (initialClaimData.stageData) {
+            setFormValues(initialClaimData.stageData);
+            
+            // Set the active tab to the current stage
+            setActiveTab(initialClaimData.currentStage || "");
+            
+            // Set selected issue type if available
+            const stageDataKey = initialClaimData.currentStage;
+            if (stageDataKey && initialClaimData.stageData[stageDataKey]?.issue_type) {
+              setSelectedIssueType(initialClaimData.stageData[stageDataKey].issue_type);
+            }
+          }
+        } else {
+          // Fetch claim data from API
+          const claimResponse = await fetch(`http://localhost:8081/api/claims/${claimId}`);
+          if (!claimResponse.ok) {
+            throw new Error('Failed to fetch claim data');
+          }
+          const claimDataResponse = await claimResponse.json();
+          console.log("Fetched claim data:", claimDataResponse);
+          setClaimData(claimDataResponse);
           
-          // Set selected issue type if available
-          if (claimDataResponse.stageData.claim_submission?.issue_type) {
-            setSelectedIssueType(claimDataResponse.stageData.claim_submission.issue_type);
+          // Initialize form values from claim data
+          if (claimDataResponse.stageData) {
+            setFormValues(claimDataResponse.stageData);
+            
+            // Set the active tab to the current stage
+            setActiveTab(claimDataResponse.currentStage || "");
+            
+            // Set selected issue type if available
+            const stageDataKey = claimDataResponse.currentStage;
+            if (stageDataKey && claimDataResponse.stageData[stageDataKey]?.issue_type) {
+              setSelectedIssueType(claimDataResponse.stageData[stageDataKey].issue_type);
+            }
           }
         }
       } catch (error) {
@@ -214,7 +239,7 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
     };
     
     fetchData();
-  }, [claimId]);
+  }, [claimId, initialClaimData]);
 
   const getStageIndex = (stageName: string): number => {
     if (!claimConfig || !claimConfig.configuration) return -1;
@@ -261,6 +286,15 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
 
   // Add a safety check for configuration
   const configurationArray = claimConfig.configuration || [];
+  
+  console.log("Current Stage Index:", currentStageIndex);
+  console.log("Configuration Array:", configurationArray);
+
+  // Format displayed data
+  const displayName = claimData.customerName || "Not Available";
+  const displayDeviceMake = claimData.deviceMake || "Not Available";
+  const displayDate = claimData.dateCreated || claimData.createdDate || "Not Available";
+  const displayContact = claimData.contact || "Not Available";
 
   return (
     <div className="space-y-6 bg-gray-50 p-6 rounded-lg">
@@ -278,17 +312,17 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
           </div>
           <div className="mb-4">
             <span className="text-gray-500">Customer Name:</span>
-            <span className="ml-2 font-medium">{claimData.customerName}</span>
+            <span className="ml-2 font-medium">{displayName}</span>
           </div>
           <div className="mb-4">
             <span className="text-gray-500">Device Make:</span>
-            <span className="ml-2 font-medium">{claimData.deviceMake}</span>
+            <span className="ml-2 font-medium">{displayDeviceMake}</span>
           </div>
         </div>
         <div>
           <div className="mb-4">
             <span className="text-gray-500">Date Created:</span>
-            <span className="ml-2 font-medium">{claimData.dateCreated}</span>
+            <span className="ml-2 font-medium">{displayDate}</span>
           </div>
           <div className="mb-4">
             <span className="text-gray-500">Status:</span>
@@ -300,35 +334,43 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
           </div>
           <div className="mb-4">
             <span className="text-gray-500">Contact:</span>
-            <span className="ml-2 font-medium">{claimData.contact}</span>
+            <span className="ml-2 font-medium">{displayContact}</span>
           </div>
         </div>
       </div>
       
       {/* Claim Progress Timeline */}
       <div className="flex justify-center items-center py-8">
-        {configurationArray.map((stage, index) => (
-          <React.Fragment key={stage.stageName}>
-            <div className="flex flex-col items-center">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                index < currentStageIndex 
-                  ? 'bg-green-500 text-white' 
-                  : index === currentStageIndex 
-                    ? 'bg-blue-500 text-white' 
-                    : 'bg-gray-200 text-gray-500'
-              }`}>
-                {index + 1}
+        {configurationArray.length > 0 ? (
+          configurationArray.map((stage, index) => (
+            <React.Fragment key={stage.stageName}>
+              <div className="flex flex-col items-center">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                  index < currentStageIndex 
+                    ? 'bg-green-500 text-white' 
+                    : index === currentStageIndex 
+                      ? 'bg-blue-500 text-white' 
+                      : 'bg-gray-200 text-gray-500'
+                }`}>
+                  {index < currentStageIndex ? (
+                    <Check className="h-5 w-5" />
+                  ) : (
+                    index + 1
+                  )}
+                </div>
+                <span className="text-sm mt-2 text-center max-w-[120px]">{stage.stageName}</span>
               </div>
-              <span className="text-sm mt-2 text-center max-w-[120px]">{stage.stageName}</span>
-            </div>
-            
-            {index < configurationArray.length - 1 && (
-              <div className={`h-[2px] w-24 mx-2 ${
-                index < currentStageIndex ? 'bg-blue-500' : 'bg-gray-300'
-              }`} />
-            )}
-          </React.Fragment>
-        ))}
+              
+              {index < configurationArray.length - 1 && (
+                <div className={`h-[2px] w-24 mx-2 ${
+                  index < currentStageIndex ? 'bg-blue-500' : 'bg-gray-300'
+                }`} />
+              )}
+            </React.Fragment>
+          ))
+        ) : (
+          <div className="text-gray-500">No stages defined</div>
+        )}
       </div>
       
       {/* Stage Content */}
