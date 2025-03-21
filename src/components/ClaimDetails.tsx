@@ -609,7 +609,7 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
   // Format displayed data
   const displayName = claimData.customerName || "Not Available";
   const displayDeviceMake = claimData.deviceMake || "Not Available";
-  const displayDate = claimData.dateCreated || claimData.createdDate || "Not Available";
+  const displayDate = claimData.createdDate.split('T')[0] || "Not Available";
   const displayContact = claimData.contact || "Not Available";
 
   return (

@@ -70,10 +70,8 @@ const ViewClaims = () => {
         id: "1",
         referenceNumber: searchQuery,
         status: claimData.status || "In Progress",
-        dateSubmitted: claimData.dateCreated || new Date().toISOString().split('T')[0],
-        claimType: claimData.claimType,
-        customerId: claimData.customerId,
-        productId: claimData.productId
+        dateSubmitted: claimData.createdDate.split('T')[0] || new Date().toISOString().split('T')[0],
+        claimType: claimData.claimType
       }];
 
       setSearchResults(mockResults);
@@ -199,12 +197,12 @@ const ViewClaims = () => {
             <div className="flex flex-col md:flex-row gap-4 mb-6">
               <div className="flex-1">
                 <label htmlFor="referenceNumber" className="block text-sm font-medium text-gray-700 mb-1">
-                  Reference Number
+                  SR No
                 </label>
                 <Input
                   id="referenceNumber"
                   type="text"
-                  placeholder="Enter claim reference number"
+                  placeholder="Enter claim number"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full"
@@ -223,7 +221,7 @@ const ViewClaims = () => {
             </div>
             
             <div className="text-sm text-gray-500">
-              <p>Enter a reference number to find a specific claim. Try "12345" for a sample result.</p>
+              <p>Enter SR number to find a specific claim.</p>
             </div>
           </div>
 
@@ -236,7 +234,7 @@ const ViewClaims = () => {
                   <table className="w-full border-collapse">
                     <thead>
                       <tr className="bg-gray-100 text-left rounded-lg">
-                        <th className="p-4 font-medium text-gray-700">Reference #</th>
+                        <th className="p-4 font-medium text-gray-700">SR No</th>
                         <th className="p-4 font-medium text-gray-700">Status</th>
                         <th className="p-4 font-medium text-gray-700">Date Submitted</th>
                         <th className="p-4 font-medium text-gray-700">Claim Type</th>
@@ -285,7 +283,7 @@ const ViewClaims = () => {
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
         <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden p-0">
           <DialogHeader className="px-6 py-4 border-b">
-            <DialogTitle className="text-blue-700">Claim Details - Reference #{selectedClaim}</DialogTitle>
+            <DialogTitle className="text-blue-700">Claim Details - {selectedClaim}</DialogTitle>
           </DialogHeader>
           
           <ScrollArea className="max-h-[calc(90vh-80px)]">
