@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ClaimStage from '@/components/ClaimStage';
@@ -35,6 +34,116 @@ interface Action {
   action: string;
   nextStage: string;
 }
+
+// Default template data for quick start
+const defaultStages = ["Claim Submission", "Documentation", "Review"];
+
+const defaultFormFields: Record<string, FormField[]> = {
+  "Claim Submission": [
+    {
+      fieldLabel: "Full Name",
+      fieldType: "Text",
+      mandatory: true
+    },
+    {
+      fieldLabel: "Email",
+      fieldType: "Text",
+      mandatory: true
+    },
+    {
+      fieldLabel: "Phone Number",
+      fieldType: "Text",
+      mandatory: true
+    },
+    {
+      fieldLabel: "Incident Date",
+      fieldType: "Date",
+      mandatory: true
+    },
+    {
+      fieldLabel: "Claim Type",
+      fieldType: "Dropdown",
+      mandatory: true,
+      options: ["Damage", "Theft", "Loss", "Malfunction"]
+    }
+  ],
+  "Documentation": [
+    {
+      fieldLabel: "Incident Description",
+      fieldType: "Text",
+      mandatory: true
+    },
+    {
+      fieldLabel: "Estimated Value",
+      fieldType: "Number",
+      mandatory: true
+    }
+  ],
+  "Review": [
+    {
+      fieldLabel: "Additional Comments",
+      fieldType: "Text",
+      mandatory: false
+    },
+    {
+      fieldLabel: "Terms Acceptance",
+      fieldType: "Checkbox",
+      mandatory: true
+    }
+  ]
+};
+
+const defaultDocuments: Record<string, Document[]> = {
+  "Claim Submission": [],
+  "Documentation": [
+    {
+      documentType: "Proof of Purchase",
+      format: ["PDF", "JPG"],
+      mandatory: true
+    },
+    {
+      documentType: "Damage Photos",
+      format: ["JPG", "PNG"],
+      mandatory: true
+    }
+  ],
+  "Review": [
+    {
+      documentType: "ID Verification",
+      format: ["PDF"],
+      mandatory: true
+    }
+  ]
+};
+
+const defaultActions: Record<string, Action[]> = {
+  "Claim Submission": [
+    {
+      action: "Next",
+      nextStage: "Documentation"
+    }
+  ],
+  "Documentation": [
+    {
+      action: "Previous",
+      nextStage: "Claim Submission"
+    },
+    {
+      action: "Next",
+      nextStage: "Review"
+    }
+  ],
+  "Review": [
+    {
+      action: "Previous",
+      nextStage: "Documentation"
+    },
+    {
+      action: "Submit",
+      nextStage: ""
+    }
+  ]
+};
 
 const formatOptions = ["PDF", "JPG", "PNG", "TXT"];
 
@@ -130,7 +239,7 @@ const Index = () => {
     return selectedCategory ? serviceOptionsMap[selectedCategory] || [] : [];
   };
 
-  // Handle start configuration button
+  // Handle start configuration button - Updated to load default template
   const handleStartConfiguration = () => {
     if (!selectedCategory || !selectedService) {
       toast.error("Please select both category and service");
@@ -139,10 +248,14 @@ const Index = () => {
     
     setShowConfigSection(true);
     
-    // If no stages exist, add initial stage
-    if (stages.length === 0) {
-      handleAddStage();
-    }
+    // Load the default template
+    setStages(defaultStages);
+    setFormFields(JSON.parse(JSON.stringify(defaultFormFields)));
+    setDocuments(JSON.parse(JSON.stringify(defaultDocuments)));
+    setActions(JSON.parse(JSON.stringify(defaultActions)));
+    setActiveStage(defaultStages[0]);
+    
+    toast.success("Default configuration template loaded");
   };
 
   // Function to add a new stage
@@ -887,274 +1000,4 @@ const Index = () => {
 
                     <button 
                       onClick={() => setIsAddActionOpen(true)}
-                      className="mt-4 flex items-center px-4 py-2 text-sm border border-gray-300 rounded-md text-gray-600 hover:bg-gray-50 transition-colors"
-                    >
-                      <Plus size={16} className="mr-2" />
-                      Add Action
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
-
-            {/* Empty state message when no stages have been added */}
-            {stages.length === 0 && (
-              <div className="bg-white rounded-lg border border-gray-200 p-10 mb-6 text-center animate-fade-in-up">
-                <h2 className="text-xl font-medium mb-4 text-gray-700">No Stages Configured</h2>
-                <p className="text-gray-500 mb-6">Start by adding a stage to your claim journey using the "Add Stage" button above.</p>
-              </div>
-            )}
-
-            {/* Save Actions */}
-            <div className="flex justify-end space-x-4 my-8">
-              <Button 
-                variant="outline" 
-                onClick={() => navigate('/')}
-                disabled={isSaving}
-              >
-                Cancel
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={handleSaveConfiguration}
-                disabled={stages.length === 0 || isSaving}
-                className="bg-claims-gray text-white hover:bg-gray-600"
-              >
-                {isSaving ? "Saving..." : "Save Configuration"}
-              </Button>
-              <Button 
-                onClick={handleSaveAndPreview}
-                disabled={stages.length === 0 || isSaving}
-                className="bg-claims-blue text-white hover:bg-blue-600"
-              >
-                {isSaving ? "Saving..." : "Save & Preview"}
-              </Button>
-            </div>
-          </>
-        )}
-      </main>
-
-      {/* Add Field Dialog */}
-      <Dialog open={isAddFieldOpen} onOpenChange={setIsAddFieldOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Add New Field</DialogTitle>
-          </DialogHeader>
-          
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <label htmlFor="fieldLabel" className="text-right">Field Label</label>
-              <input
-                id="fieldLabel"
-                value={newField.fieldLabel}
-                onChange={(e) => setNewField({...newField, fieldLabel: e.target.value})}
-                className="col-span-3 border p-2 rounded"
-              />
-            </div>
-            
-            <div className="grid grid-cols-4 items-center gap-4">
-              <label htmlFor="fieldType" className="text-right">Field Type</label>
-              <select
-                id="fieldType"
-                value={newField.fieldType}
-                onChange={(e) => setNewField({
-                  ...newField, 
-                  fieldType: e.target.value,
-                  // Reset options if changing away from dropdown/radio
-                  options: e.target.value === "Dropdown" || e.target.value === "Radio Buttons" 
-                    ? (newField.options || []) 
-                    : undefined
-                })}
-                className="col-span-3 border p-2 rounded"
-              >
-                <option value="Text">Text</option>
-                <option value="Number">Number</option>
-                <option value="Dropdown">Dropdown</option>
-                <option value="Radio Buttons">Radio Buttons</option>
-                <option value="Checkbox">Checkbox</option>
-                <option value="Date">Date</option>
-              </select>
-            </div>
-            
-            <div className="grid grid-cols-4 items-center gap-4">
-              <label htmlFor="mandatory" className="text-right">Mandatory</label>
-              <div className="col-span-3 flex items-center">
-                <Checkbox 
-                  id="mandatory" 
-                  checked={newField.mandatory}
-                  onCheckedChange={(checked) => 
-                    setNewField({...newField, mandatory: checked === true})
-                  }
-                />
-                <label htmlFor="mandatory" className="ml-2 text-sm">Required field</label>
-              </div>
-            </div>
-            
-            {/* Options section for dropdown and radio buttons */}
-            {(newField.fieldType === "Dropdown" || newField.fieldType === "Radio Buttons") && (
-              <div className="grid grid-cols-4 items-start gap-4">
-                <label className="text-right pt-2">Options</label>
-                <div className="col-span-3 space-y-2">
-                  <div className="flex space-x-2">
-                    <Input
-                      value={optionInput}
-                      onChange={(e) => setOptionInput(e.target.value)}
-                      placeholder="Enter option value"
-                      className="flex-1"
-                    />
-                    <Button 
-                      type="button" 
-                      onClick={handleAddOption}
-                      variant="outline"
-                    >
-                      Add
-                    </Button>
-                  </div>
-                  
-                  {/* Display added options */}
-                  {newField.options && newField.options.length > 0 && (
-                    <div className="border rounded-md p-2 mt-2">
-                      <p className="text-sm text-gray-500 mb-2">Added options:</p>
-                      <div className="space-y-1">
-                        {newField.options.map((option, index) => (
-                          <div key={index} className="flex items-center justify-between bg-gray-50 p-1 rounded">
-                            <span className="text-sm">{option}</span>
-                            <button
-                              onClick={() => handleRemoveOption(index)}
-                              className="text-red-500 hover:text-red-700"
-                              aria-label="Remove option"
-                            >
-                              <X size={16} />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-          
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setIsAddFieldOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="button" onClick={handleAddField}>
-              Add Field
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Add Document Dialog */}
-      <Dialog open={isAddDocumentOpen} onOpenChange={setIsAddDocumentOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Add Document</DialogTitle>
-          </DialogHeader>
-          
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <label htmlFor="documentType" className="text-right">Document Type</label>
-              <input
-                id="documentType"
-                value={newDocument.documentType}
-                onChange={(e) => setNewDocument({...newDocument, documentType: e.target.value})}
-                className="col-span-3 border p-2 rounded"
-                placeholder="e.g., Identity Card, Invoice"
-              />
-            </div>
-            
-            <div className="grid grid-cols-4 items-start gap-4">
-              <label className="text-right pt-2">Format</label>
-              <div className="col-span-3 space-y-2">
-                {formatOptions.map((format) => (
-                  <div key={format} className="flex items-center">
-                    <Checkbox 
-                      id={`format-${format}`} 
-                      checked={newDocument.format.includes(format)}
-                      onCheckedChange={() => toggleFormat(format)}
-                    />
-                    <label htmlFor={`format-${format}`} className="ml-2 text-sm">{format}</label>
-                  </div>
-                ))}
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-4 items-center gap-4">
-              <label htmlFor="docMandatory" className="text-right">Mandatory</label>
-              <div className="col-span-3 flex items-center">
-                <Checkbox 
-                  id="docMandatory" 
-                  checked={newDocument.mandatory}
-                  onCheckedChange={(checked) => 
-                    setNewDocument({...newDocument, mandatory: checked === true})
-                  }
-                />
-                <label htmlFor="docMandatory" className="ml-2 text-sm">Required document</label>
-              </div>
-            </div>
-          </div>
-          
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setIsAddDocumentOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="button" onClick={handleAddDocument}>
-              Add Document
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Add Action Dialog */}
-      <Dialog open={isAddActionOpen} onOpenChange={setIsAddActionOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Add Action</DialogTitle>
-          </DialogHeader>
-          
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <label htmlFor="actionName" className="text-right">Action</label>
-              <input
-                id="actionName"
-                value={newAction.action}
-                onChange={(e) => setNewAction({...newAction, action: e.target.value})}
-                className="col-span-3 border p-2 rounded"
-                placeholder="e.g., Submit, Save, Approve"
-              />
-            </div>
-            
-            <div className="grid grid-cols-4 items-center gap-4">
-              <label htmlFor="nextStage" className="text-right">Next Stage</label>
-              <select
-                id="nextStage"
-                value={newAction.nextStage}
-                onChange={(e) => setNewAction({...newAction, nextStage: e.target.value})}
-                className="col-span-3 border p-2 rounded"
-              >
-                <option value="">-- No Next Stage --</option>
-                {getAvailableNextStages().map(stage => (
-                  <option key={stage} value={stage}>{stage}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-          
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setIsAddActionOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="button" onClick={handleAddAction}>
-              Add Action
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-};
-
-export default Index;
+                      className="mt-4 flex items-center px-4 py-2 text-sm border border-gray-300 rounded-md text-gray-600 hover:
