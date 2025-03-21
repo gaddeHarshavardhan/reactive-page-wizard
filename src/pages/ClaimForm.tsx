@@ -1,36 +1,28 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Calendar as CalendarIcon, 
-  ChevronDown, 
-  Upload, 
-  AlertCircle 
-} from 'lucide-react';
-import { format } from 'date-fns';
-import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { 
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { CalendarIcon, Check, ChevronRight, Upload } from 'lucide-react';
+import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
-// Interface for the config data structure
-interface FormField {
+// Interfaces
+interface Field {
   name: string;
   type: string;
   mandatory: boolean;
   validation: string;
 }
 
-interface Document {
+interface DocumentSpec {
   name: string;
   mandatory: boolean;
   maxSize: number;
@@ -40,14 +32,14 @@ interface Document {
 interface Action {
   option: string;
   stage?: string;
-  buttonLabel?: string;
-  condition?: string;
+  buttonLabel: string;
+  condition: string;
 }
 
 interface Stage {
   stageName: string;
-  fields: FormField[];
-  documents: Document[];
+  fields: Field[];
+  documents: DocumentSpec[];
   actions: Action[];
 }
 
@@ -55,502 +47,452 @@ interface ClaimConfig {
   stages: Stage[];
 }
 
+interface FormValues {
+  [key: string]: any;
+}
+
+interface UploadedDocument {
+  name: string;
+  documentName: string;
+  size: number;
+  format: string;
+}
+
+// Main Component
 const ClaimForm = () => {
   const navigate = useNavigate();
-  const [claimConfig, setClaimConfig] = useState<ClaimConfig | null>(null);
+  const [config, setConfig] = useState<ClaimConfig | null>(null);
   const [currentStageIndex, setCurrentStageIndex] = useState(0);
-  const [formData, setFormData] = useState<Record<string, any>>({});
-  const [uploadedDocs, setUploadedDocs] = useState<Record<string, File | null>>({});
-  const [loading, setLoading] = useState(true);
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [formValues, setFormValues] = useState<FormValues>({});
+  const [uploadedDocuments, setUploadedDocuments] = useState<UploadedDocument[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Fetch configuration data
+  // Load configuration from localStorage
   useEffect(() => {
-    // In a real app, we would fetch this from an API
-    // For now, we'll simulate loading the data
-    const loadConfigFromStorage = () => {
+    const storedConfig = localStorage.getItem('claimConfig');
+    if (storedConfig) {
       try {
-        // This is where we would normally fetch from an API endpoint
-        // For demonstration, we'll create a sample config matching the image
-        const sampleConfig: ClaimConfig = {
-          stages: [
-            {
-              stageName: "Device Details",
-              fields: [
-                {
-                  name: "Device Model",
-                  type: "dropdown",
-                  mandatory: true,
-                  validation: "From pre-defined list"
-                },
-                {
-                  name: "Issue Type",
-                  type: "radio buttons",
-                  mandatory: true,
-                  validation: "One selection required"
-                },
-                {
-                  name: "Purchase Date",
-                  type: "date",
-                  mandatory: true,
-                  validation: "Valid date"
-                },
-                {
-                  name: "Description",
-                  type: "textarea",
-                  mandatory: false,
-                  validation: ""
-                }
-              ],
-              documents: [
-                {
-                  name: "Proof of Purchase",
-                  mandatory: true,
-                  maxSize: 10,
-                  allowedFormat: ["PDF"]
-                }
-              ],
-              actions: [
-                {
-                  option: "submit",
-                  stage: "Document Upload",
-                  buttonLabel: "Continue",
-                  condition: "All fields valid"
-                },
-                {
-                  option: "save",
-                  buttonLabel: "Save for Later",
-                  condition: "Any state"
-                }
-              ]
-            },
-            {
-              stageName: "Document Upload",
-              fields: [],
-              documents: [
-                {
-                  name: "Device Photos",
-                  mandatory: true,
-                  maxSize: 5,
-                  allowedFormat: ["JPG", "PNG"]
-                }
-              ],
-              actions: [
-                {
-                  option: "submit",
-                  stage: "Claim Assessment",
-                  buttonLabel: "Continue",
-                  condition: "All fields valid"
-                },
-                {
-                  option: "previous",
-                  stage: "Device Details",
-                  buttonLabel: "Back",
-                  condition: "Any state"
-                },
-                {
-                  option: "save",
-                  buttonLabel: "Save for Later",
-                  condition: "Any state"
-                }
-              ]
-            },
-            {
-              stageName: "Claim Assessment",
-              fields: [],
-              documents: [],
-              actions: [
-                {
-                  option: "submit",
-                  buttonLabel: "Complete Claim",
-                  condition: "All fields valid"
-                },
-                {
-                  option: "previous",
-                  stage: "Document Upload",
-                  buttonLabel: "Back",
-                  condition: "Any state"
-                }
-              ]
-            }
-          ]
-        };
-        
-        setClaimConfig(sampleConfig);
-        
-        // Initialize formData for required fields
-        const initialFormData: Record<string, any> = {};
-        sampleConfig.stages.forEach(stage => {
-          stage.fields.forEach(field => {
-            initialFormData[field.name] = '';
-          });
-        });
-        
-        setFormData(initialFormData);
-        
-        // Initialize uploadedDocs
-        const initialDocs: Record<string, File | null> = {};
-        sampleConfig.stages.forEach(stage => {
-          stage.documents.forEach(doc => {
-            initialDocs[doc.name] = null;
-          });
-        });
-        
-        setUploadedDocs(initialDocs);
-        
+        const parsedConfig = JSON.parse(storedConfig);
+        setConfig(parsedConfig);
+        console.log('Loaded claim config:', parsedConfig);
       } catch (error) {
-        console.error("Error loading configuration:", error);
-        toast.error("Failed to load claim configuration");
-      } finally {
-        setLoading(false);
+        console.error('Error parsing claim config:', error);
+        toast.error('Failed to load claim configuration');
       }
-    };
-
-    loadConfigFromStorage();
-  }, []);
-
-  // Handle input changes
-  const handleInputChange = (name: string, value: any) => {
-    setFormData(prev => ({ ...prev, [name]: value }));
-    
-    // Clear error if field is now valid
-    if (formErrors[name] && value) {
-      setFormErrors(prev => {
-        const newErrors = { ...prev };
-        delete newErrors[name];
-        return newErrors;
-      });
-    }
-  };
-
-  // Handle file uploads
-  const handleFileUpload = (name: string, file: File | null) => {
-    setUploadedDocs(prev => ({ ...prev, [name]: file }));
-    
-    // Clear error if document is now uploaded
-    if (formErrors[name] && file) {
-      setFormErrors(prev => {
-        const newErrors = { ...prev };
-        delete newErrors[name];
-        return newErrors;
-      });
-    }
-  };
-
-  // Validate current stage
-  const validateCurrentStage = () => {
-    if (!claimConfig) return false;
-    
-    const currentStage = claimConfig.stages[currentStageIndex];
-    const newErrors: Record<string, string> = {};
-    
-    // Validate fields
-    currentStage.fields.forEach(field => {
-      if (field.mandatory && !formData[field.name]) {
-        newErrors[field.name] = `${field.name} is required`;
-      }
-    });
-    
-    // Validate documents
-    currentStage.documents.forEach(doc => {
-      if (doc.mandatory && !uploadedDocs[doc.name]) {
-        newErrors[doc.name] = `${doc.name} is required`;
-      }
-    });
-    
-    setFormErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  // Handle action buttons (continue, back, save)
-  const handleAction = (action: Action) => {
-    // For submit action, validate first
-    if (action.option === 'submit' && action.stage) {
-      if (!validateCurrentStage()) {
-        toast.error("Please fill in all required fields");
-        return;
-      }
-      
-      // Find the index of the next stage
-      if (claimConfig) {
-        const nextStageIndex = claimConfig.stages.findIndex(s => s.stageName === action.stage);
-        if (nextStageIndex !== -1) {
-          setCurrentStageIndex(nextStageIndex);
-          window.scrollTo(0, 0);
-          return;
-        }
-      }
-    }
-    
-    // For previous action
-    if (action.option === 'previous' && action.stage) {
-      if (claimConfig) {
-        const prevStageIndex = claimConfig.stages.findIndex(s => s.stageName === action.stage);
-        if (prevStageIndex !== -1) {
-          setCurrentStageIndex(prevStageIndex);
-          window.scrollTo(0, 0);
-          return;
-        }
-      }
-    }
-    
-    // For save action
-    if (action.option === 'save') {
-      toast.success("Your claim has been saved");
-      // In a real app, we would save the form data to the server here
-      return;
-    }
-    
-    // For completing the claim
-    if (action.option === 'submit' && !action.stage) {
-      if (!validateCurrentStage()) {
-        toast.error("Please fill in all required fields");
-        return;
-      }
-      
-      toast.success("Your claim has been submitted successfully");
-      // In a real app, we would submit the entire claim to the server here
+    } else {
+      toast.error('No claim configuration found. Please create one first.');
       setTimeout(() => {
         navigate('/');
       }, 2000);
     }
+  }, [navigate]);
+
+  const currentStage = config?.stages[currentStageIndex];
+
+  // Handle form value changes
+  const handleInputChange = (name: string, value: any) => {
+    setFormValues(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
-      </div>
-    );
-  }
+  // Handle document upload
+  const handleDocumentUpload = (documentName: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-  if (!claimConfig) {
+    const documentSpec = currentStage?.documents.find(doc => doc.name === documentName);
+    if (!documentSpec) return;
+
+    // Check file size (convert MB to bytes)
+    const maxSizeBytes = documentSpec.maxSize * 1024 * 1024;
+    if (file.size > maxSizeBytes) {
+      toast.error(`File too large. Maximum size is ${documentSpec.maxSize}MB`);
+      return;
+    }
+
+    // Check file format
+    const fileExtension = file.name.split('.').pop()?.toUpperCase() || '';
+    if (!documentSpec.allowedFormat.includes(fileExtension)) {
+      toast.error(`Invalid file format. Allowed formats: ${documentSpec.allowedFormat.join(', ')}`);
+      return;
+    }
+
+    // Add document to uploaded list
+    const newDocument: UploadedDocument = {
+      name: file.name,
+      documentName,
+      size: file.size,
+      format: fileExtension
+    };
+
+    // Replace if already exists
+    setUploadedDocuments(prev => {
+      const filtered = prev.filter(doc => doc.documentName !== documentName);
+      return [...filtered, newDocument];
+    });
+
+    toast.success(`Uploaded: ${file.name}`);
+  };
+
+  // Handle form actions
+  const handleAction = (action: Action) => {
+    setIsSubmitting(true);
+
+    // Validate required fields if action requires it
+    if (action.condition === 'All fields valid') {
+      const requiredFields = currentStage?.fields.filter(field => field.mandatory) || [];
+      for (const field of requiredFields) {
+        if (formValues[field.name] === undefined || formValues[field.name] === '') {
+          toast.error(`Please fill in ${field.name}`);
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
+      const requiredDocs = currentStage?.documents.filter(doc => doc.mandatory) || [];
+      for (const doc of requiredDocs) {
+        if (!uploadedDocuments.some(uploaded => uploaded.documentName === doc.name)) {
+          toast.error(`Please upload ${doc.name}`);
+          setIsSubmitting(false);
+          return;
+        }
+      }
+    }
+
+    // Process action
+    setTimeout(() => {
+      setIsSubmitting(false);
+
+      if (action.option === 'submit' && action.stage) {
+        // Find next stage index
+        const nextStageIndex = config?.stages.findIndex(stage => stage.stageName === action.stage);
+        if (nextStageIndex !== undefined && nextStageIndex !== -1) {
+          setCurrentStageIndex(nextStageIndex);
+          toast.success(`Moving to ${action.stage}`);
+        }
+      } else if (action.option === 'save') {
+        toast.success('Claim progress saved');
+      } else if (action.option === 'cancel') {
+        toast.info('Claim cancelled');
+        navigate('/');
+      }
+    }, 1000);
+  };
+
+  // Render loading state if config is not loaded
+  if (!config || !currentStage) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-2">Configuration Error</h2>
-          <p className="text-gray-600">Unable to load claim configuration.</p>
-          <Button className="mt-4" onClick={() => navigate('/')}>
-            Return to Home
-          </Button>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-pulse">
+          <h2 className="text-xl font-medium text-gray-500">Loading claim form...</h2>
         </div>
       </div>
     );
   }
 
-  const currentStage = claimConfig.stages[currentStageIndex];
-
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pb-10">
       {/* Header */}
       <header className="bg-claims-blue py-5 px-8 text-white">
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-2xl font-bold">Mobile Protection Claim</h1>
+        <div className="max-w-3xl mx-auto">
+          <div className="flex justify-between items-center">
+            <h1 className="text-2xl font-medium animate-fade-in">Mobile Protection Claim</h1>
+            <div className="text-lg animate-fade-in">Claim #MP-2023112233</div>
+          </div>
         </div>
       </header>
 
-      {/* Progress Indicator */}
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-8">
-          {claimConfig.stages.map((stage, index) => (
+      {/* Progress Indicators */}
+      <div className="max-w-3xl mx-auto px-4 mt-8">
+        <div className="flex items-center justify-start mb-8">
+          {config.stages.map((stage, index) => (
             <React.Fragment key={stage.stageName}>
-              <div className="flex flex-col items-center">
-                <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white ${
-                  index < currentStageIndex ? 'bg-blue-500' : 
-                  index === currentStageIndex ? 'bg-blue-500' : 
-                  'bg-gray-200 text-gray-600'
-                }`}>
-                  {index + 1}
-                </div>
-                <span className="mt-2 text-sm text-center">{stage.stageName}</span>
+              <div 
+                className={cn(
+                  "rounded-full w-10 h-10 flex items-center justify-center font-semibold",
+                  index < currentStageIndex 
+                    ? "bg-claims-green text-white" 
+                    : index === currentStageIndex 
+                      ? "bg-claims-blue text-white" 
+                      : "bg-gray-200 text-gray-600"
+                )}
+              >
+                {index < currentStageIndex ? (
+                  <Check className="w-5 h-5" />
+                ) : (
+                  index + 1
+                )}
               </div>
-              {index < claimConfig.stages.length - 1 && (
-                <div className={`h-1 flex-1 ${
-                  index < currentStageIndex ? 'bg-blue-500' : 'bg-gray-200'
-                }`}></div>
+              {index < config.stages.length - 1 && (
+                <div 
+                  className={cn(
+                    "h-1 w-16", 
+                    index < currentStageIndex ? "bg-claims-green" : "bg-gray-200"
+                  )}
+                ></div>
               )}
             </React.Fragment>
           ))}
         </div>
+        
+        <div className="mb-4">
+          <div className="flex items-center">
+            <h2 className="text-2xl font-medium">{currentStage.stageName}</h2>
+            <span className="ml-3 text-sm bg-claims-blue text-white px-2 py-1 rounded">
+              Step {currentStageIndex + 1} of {config.stages.length}
+            </span>
+          </div>
+          <p className="text-gray-600 mt-2">
+            {currentStage.stageName === 'Claim Submission' && 'Please provide details about your device and the issue.'}
+            {currentStage.stageName === 'Document Upload' && 'Please upload the required documents to support your claim.'}
+            {currentStage.stageName === 'Claim Assessment' && 'Your claim is being assessed. Please provide any additional information if requested.'}
+          </p>
+        </div>
 
-        {/* Form Content */}
-        <div className="bg-white rounded-lg shadow-sm p-8">
-          <h2 className="text-2xl font-bold mb-6">
-            {currentStage.stageName === "Device Details" ? "Device Information" : currentStage.stageName}
-          </h2>
+        {/* Form */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+          <h3 className="text-lg font-medium mb-4 pb-2 border-b border-gray-200">
+            {currentStage.fields.length > 0 ? 'Required Information' : 'Information'}
+          </h3>
 
-          {/* Form Fields */}
-          <div className="space-y-8">
+          <div className="space-y-6">
             {currentStage.fields.map((field) => (
-              <div key={field.name} className="space-y-2">
-                <div className="flex items-center">
-                  <label className="text-gray-700 font-medium">{field.name}</label>
-                  {field.mandatory && (
-                    <span className="ml-1 text-red-500">
-                      <AlertCircle size={16} />
-                    </span>
+              <div key={field.name} className="grid grid-cols-3 gap-4 items-start">
+                <Label htmlFor={field.name} className="text-sm font-medium mt-2">
+                  {field.name}
+                  {field.mandatory && <span className="text-red-500 ml-1">*</span>}
+                </Label>
+                <div className="col-span-2">
+                  {field.type === 'text' && (
+                    <Input 
+                      id={field.name}
+                      value={formValues[field.name] || ''}
+                      onChange={(e) => handleInputChange(field.name, e.target.value)}
+                      placeholder={`Enter ${field.name.toLowerCase()}`}
+                      className="w-full"
+                    />
+                  )}
+                  {field.type === 'number' && (
+                    <Input 
+                      id={field.name}
+                      type="number"
+                      value={formValues[field.name] || ''}
+                      onChange={(e) => handleInputChange(field.name, e.target.value)}
+                      placeholder={`Enter ${field.name.toLowerCase()}`}
+                      className="w-full"
+                    />
+                  )}
+                  {field.type === 'dropdown' && (
+                    <Select 
+                      value={formValues[field.name] || ''}
+                      onValueChange={(value) => handleInputChange(field.name, value)}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder={`Select ${field.name.toLowerCase()}`} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {field.name === 'Device Model' ? (
+                          <>
+                            <SelectItem value="iphone-13">iPhone 13</SelectItem>
+                            <SelectItem value="iphone-14">iPhone 14</SelectItem>
+                            <SelectItem value="iphone-15">iPhone 15</SelectItem>
+                            <SelectItem value="galaxy-s22">Galaxy S22</SelectItem>
+                            <SelectItem value="galaxy-s23">Galaxy S23</SelectItem>
+                            <SelectItem value="pixel-7">Pixel 7</SelectItem>
+                          </>
+                        ) : (
+                          <SelectItem value="option">Option</SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  )}
+                  {field.type === 'radio buttons' && (
+                    <RadioGroup 
+                      value={formValues[field.name] || ''}
+                      onValueChange={(value) => handleInputChange(field.name, value)}
+                      className="flex flex-col space-y-2"
+                    >
+                      {field.name === 'Issue Type' ? (
+                        <>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="screen-damage" id="screen-damage" />
+                            <Label htmlFor="screen-damage">Screen Damage</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="battery-issue" id="battery-issue" />
+                            <Label htmlFor="battery-issue">Battery Issue</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="not-powering-on" id="not-powering-on" />
+                            <Label htmlFor="not-powering-on">Not Powering On</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="water-damage" id="water-damage" />
+                            <Label htmlFor="water-damage">Water Damage</Label>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="option" id="option" />
+                          <Label htmlFor="option">Option</Label>
+                        </div>
+                      )}
+                    </RadioGroup>
+                  )}
+                  {field.type === 'checkbox' && (
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id={field.name}
+                        checked={formValues[field.name] || false}
+                        onCheckedChange={(checked) => 
+                          handleInputChange(field.name, checked === true)
+                        }
+                      />
+                      <Label htmlFor={field.name}>Yes</Label>
+                    </div>
+                  )}
+                  {field.type === 'date' && (
+                    <div className="grid gap-2">
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full justify-start text-left font-normal",
+                              !formValues[field.name] && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {formValues[field.name] ? format(formValues[field.name], "PPP") : `Select ${field.name.toLowerCase()}`}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                          <Calendar
+                            mode="single"
+                            selected={formValues[field.name]}
+                            onSelect={(date) => handleInputChange(field.name, date)}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  )}
+                  {field.validation && (
+                    <p className="text-gray-500 text-xs mt-1">{field.validation}</p>
                   )}
                 </div>
-
-                {field.type === 'dropdown' && (
-                  <div className="relative w-full">
-                    <div className="border rounded-md p-3 flex justify-between items-center cursor-pointer">
-                      {formData[field.name] || `Select ${field.name}`}
-                      <ChevronDown />
-                    </div>
-                    {formErrors[field.name] && (
-                      <p className="text-red-500 text-sm mt-1">{formErrors[field.name]}</p>
-                    )}
-                  </div>
-                )}
-
-                {field.type === 'radio buttons' && (
-                  <div>
-                    <RadioGroup 
-                      value={formData[field.name]} 
-                      onValueChange={(value) => handleInputChange(field.name, value)}
-                      className="grid grid-cols-2 gap-4"
-                    >
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="Screen Damage" id="screen" />
-                        <Label htmlFor="screen">Screen Damage</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="Battery Issue" id="battery" />
-                        <Label htmlFor="battery">Battery Issue</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="Water Damage" id="water" />
-                        <Label htmlFor="water">Water Damage</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="Not Powering On" id="power" />
-                        <Label htmlFor="power">Not Powering On</Label>
-                      </div>
-                    </RadioGroup>
-                    {formErrors[field.name] && (
-                      <p className="text-red-500 text-sm mt-1">{formErrors[field.name]}</p>
-                    )}
-                  </div>
-                )}
-
-                {field.type === 'date' && (
-                  <div className="flex">
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "w-[280px] justify-start text-left font-normal",
-                            !formData[field.name] && "text-muted-foreground"
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {formData[field.name] ? (
-                            format(formData[field.name], "MM/dd/yyyy")
-                          ) : (
-                            <span>MM/DD/YYYY</span>
-                          )}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={formData[field.name]}
-                          onSelect={(date) => handleInputChange(field.name, date)}
-                          initialFocus
-                          className={cn("p-3 pointer-events-auto")}
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    {formErrors[field.name] && (
-                      <p className="text-red-500 text-sm mt-1 ml-4">{formErrors[field.name]}</p>
-                    )}
-                  </div>
-                )}
-
-                {field.type === 'textarea' && (
-                  <div>
-                    <Textarea 
-                      placeholder="Describe the issue in detail..."
-                      value={formData[field.name] || ''}
-                      onChange={(e) => handleInputChange(field.name, e.target.value)}
-                      className="resize-none"
-                      rows={4}
-                    />
-                    {formErrors[field.name] && (
-                      <p className="text-red-500 text-sm mt-1">{formErrors[field.name]}</p>
-                    )}
-                  </div>
-                )}
               </div>
             ))}
+          </div>
+        </div>
 
-            {/* Documents Section */}
-            {currentStage.documents.length > 0 && (
-              <div className="mt-8">
-                <h3 className="text-xl font-bold mb-4">Required Documents</h3>
-                <div className="space-y-4">
-                  {currentStage.documents.map((doc) => (
-                    <div key={doc.name} className="border rounded-lg p-4">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <div className="flex items-center">
-                            <h4 className="font-medium">{doc.name}</h4>
-                            {doc.mandatory && (
-                              <span className="ml-1 text-red-500">
-                                <AlertCircle size={16} />
-                              </span>
-                            )}
+        {/* Documents */}
+        {currentStage.documents.length > 0 && (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+            <h3 className="text-lg font-medium mb-4 pb-2 border-b border-gray-200">Required Documents</h3>
+            
+            <div className="space-y-6">
+              {currentStage.documents.map((doc) => {
+                const uploadedDoc = uploadedDocuments.find(
+                  uploaded => uploaded.documentName === doc.name
+                );
+                
+                return (
+                  <div key={doc.name} className="grid grid-cols-3 gap-4 items-start">
+                    <div>
+                      <Label className="text-sm font-medium">
+                        {doc.name}
+                        {doc.mandatory && <span className="text-red-500 ml-1">*</span>}
+                      </Label>
+                      <p className="text-gray-500 text-xs mt-1">
+                        Max size: {doc.maxSize}MB<br />
+                        Formats: {doc.allowedFormat.join(', ')}
+                      </p>
+                    </div>
+                    <div className="col-span-2">
+                      {uploadedDoc ? (
+                        <div className="flex items-center p-3 border border-gray-200 rounded bg-gray-50">
+                          <div className="flex-1">
+                            <p className="text-sm font-medium truncate">{uploadedDoc.name}</p>
+                            <p className="text-xs text-gray-500">
+                              {(uploadedDoc.size / 1024 / 1024).toFixed(2)}MB • {uploadedDoc.format}
+                            </p>
                           </div>
-                          <p className="text-sm text-gray-500">
-                            Format: {doc.allowedFormat.join(", ")} (Max: {doc.maxSize}MB)
-                          </p>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-500"
+                            onClick={() => {
+                              setUploadedDocuments(prev => 
+                                prev.filter(u => u.documentName !== doc.name)
+                              );
+                              toast.info(`Removed ${doc.name}`);
+                            }}
+                          >
+                            Remove
+                          </Button>
                         </div>
+                      ) : (
                         <div className="flex items-center">
-                          <label htmlFor={`upload-${doc.name}`} className="cursor-pointer">
-                            <div className="bg-gray-100 hover:bg-gray-200 transition-colors px-4 py-2 rounded-md">
-                              Choose File
-                            </div>
-                            <input
-                              id={`upload-${doc.name}`}
-                              type="file"
-                              className="hidden"
-                              accept={doc.allowedFormat.map(format => `.${format.toLowerCase()}`).join(",")}
-                              onChange={(e) => {
-                                const file = e.target.files?.[0] || null;
-                                handleFileUpload(doc.name, file);
-                              }}
-                            />
-                          </label>
-                          <span className="ml-4 text-gray-500">
-                            {uploadedDocs[doc.name]?.name || "No file chosen"}
-                          </span>
+                          <Label 
+                            htmlFor={`upload-${doc.name}`}
+                            className="flex items-center px-4 py-2 border border-gray-300 rounded text-sm cursor-pointer hover:bg-gray-50"
+                          >
+                            <Upload className="w-4 h-4 mr-2" />
+                            Upload {doc.name}
+                          </Label>
+                          <Input
+                            id={`upload-${doc.name}`}
+                            type="file"
+                            className="hidden"
+                            onChange={(e) => handleDocumentUpload(doc.name, e)}
+                            accept={doc.allowedFormat.map(format => `.${format.toLowerCase()}`).join(',')}
+                          />
                         </div>
-                      </div>
-                      {formErrors[doc.name] && (
-                        <p className="text-red-500 text-sm mt-2">{formErrors[doc.name]}</p>
                       )}
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
+        )}
 
-          {/* Action Buttons */}
-          <div className="mt-8 flex justify-end space-x-4">
-            {currentStage.actions.map((action, index) => (
-              <Button
-                key={`${action.option}-${index}`}
-                variant={action.option === 'save' ? 'outline' : 'default'}
-                className={action.option === 'submit' ? 'bg-claims-blue hover:bg-claims-blue-dark' : ''}
-                onClick={() => handleAction(action)}
-              >
-                {action.buttonLabel}
-              </Button>
-            ))}
-          </div>
+        {/* Action Buttons */}
+        <div className="flex justify-end space-x-4 mt-8">
+          {currentStage.actions.map((action, index) => (
+            <Button
+              key={index}
+              variant={action.option === 'submit' ? 'default' : action.option === 'cancel' ? 'outline' : 'secondary'}
+              className={action.option === 'submit' ? 'bg-claims-blue hover:bg-claims-blue-dark' : ''}
+              onClick={() => handleAction(action)}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <div className="flex items-center">
+                  <div className="w-4 h-4 border-2 border-t-transparent border-white rounded-full animate-spin mr-2"></div>
+                  Processing...
+                </div>
+              ) : (
+                <>
+                  {action.buttonLabel}
+                  {action.option === 'submit' && <ChevronRight className="ml-2 w-4 h-4" />}
+                </>
+              )}
+            </Button>
+          ))}
+          
+          {/* If no actions are defined, show back button */}
+          {currentStage.actions.length === 0 && (
+            <Button
+              variant="outline"
+              onClick={() => navigate('/')}
+            >
+              Back to Configuration
+            </Button>
+          )}
         </div>
       </div>
     </div>
