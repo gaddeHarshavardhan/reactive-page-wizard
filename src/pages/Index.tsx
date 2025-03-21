@@ -680,8 +680,8 @@ const Index = () => {
               option: action.action.toLowerCase(),
             };
             
-            // Set the next stage (if it's "end_of_claim", set it to empty string for the backend)
-            actionData.stage = action.nextStage === "end_of_claim" ? "" : action.nextStage;
+            // Set the next stage (if it's "End Of Claim", set it to empty string for the backend)
+            actionData.stage = action.nextStage === "End Of Claim" ? "" : action.nextStage;
             
             // Add condition if it exists
             if (action.condition) {
@@ -1265,7 +1265,7 @@ const Index = () => {
                   <SelectValue placeholder="Select next stage" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="end_of_claim">End of Claim</SelectItem>
+                  <SelectItem value="End Of Claim">End of Claim</SelectItem>
                   {getAvailableNextStages().map((stage) => (
                     <SelectItem key={stage} value={stage}>{stage}</SelectItem>
                   ))}
