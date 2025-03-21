@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   Card, 
@@ -24,6 +23,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { CircleCheck, Circle, Clock, Check, ArrowRight, Calendar, Upload, Save } from 'lucide-react';
 import FormFieldRow from './FormFieldRow';
 import DocumentRow from './DocumentRow';
@@ -427,7 +427,7 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
         )}
       </div>
       
-      {/* Stage Content */}
+      {/* Stage Content - Updated with ScrollArea for proper scrolling */}
       <div className="bg-white p-6 rounded-lg shadow-sm">
         {activeTab && configurationArray.find(stage => stage.stageName === activeTab) && (
           <div>
@@ -435,124 +435,126 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
               {activeTab}
             </h3>
             
-            {/* Form Fields Section */}
-            {configurationArray.find(stage => stage.stageName === activeTab)?.fields && (
-              <div className="mb-8">
-                <h4 className="text-lg font-medium mb-4">Form Fields</h4>
-                
-                <div className="space-y-6">
-                  {configurationArray.find(stage => stage.stageName === activeTab)?.fields?.map(field => (
-                    <div key={field.name} className="space-y-2">
-                      <div className="flex items-center">
-                        <Label htmlFor={field.name} className="block text-gray-700 font-medium">
-                          {field.name}
-                        </Label>
-                        {field.mandatory && (
-                          <span className="ml-1 text-red-500 text-lg">*</span>
-                        )}
-                      </div>
-                      
-                      {field.type === 'text' && (
-                        <Input
-                          id={field.name}
-                          type="text"
-                          value={formValues[activeTab]?.[field.name] || ''}
-                          onChange={(e) => handleFormChange(activeTab, field.name, e.target.value)}
-                          className="w-full p-3 border border-gray-300 rounded-md"
-                        />
-                      )}
-                      
-                      {field.type === 'date' && (
-                        <div className="relative">
+            <ScrollArea className="h-[500px] pr-4">
+              {/* Form Fields Section */}
+              {configurationArray.find(stage => stage.stageName === activeTab)?.fields && (
+                <div className="mb-8">
+                  <h4 className="text-lg font-medium mb-4">Form Fields</h4>
+                  
+                  <div className="space-y-6">
+                    {configurationArray.find(stage => stage.stageName === activeTab)?.fields?.map(field => (
+                      <div key={field.name} className="space-y-2">
+                        <div className="flex items-center">
+                          <Label htmlFor={field.name} className="block text-gray-700 font-medium">
+                            {field.name}
+                          </Label>
+                          {field.mandatory && (
+                            <span className="ml-1 text-red-500 text-lg">*</span>
+                          )}
+                        </div>
+                        
+                        {field.type === 'text' && (
                           <Input
                             id={field.name}
-                            type="date"
+                            type="text"
                             value={formValues[activeTab]?.[field.name] || ''}
                             onChange={(e) => handleFormChange(activeTab, field.name, e.target.value)}
                             className="w-full p-3 border border-gray-300 rounded-md"
                           />
-                          <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                            <Calendar className="w-5 h-5 text-gray-400" />
+                        )}
+                        
+                        {field.type === 'date' && (
+                          <div className="relative">
+                            <Input
+                              id={field.name}
+                              type="date"
+                              value={formValues[activeTab]?.[field.name] || ''}
+                              onChange={(e) => handleFormChange(activeTab, field.name, e.target.value)}
+                              className="w-full p-3 border border-gray-300 rounded-md"
+                            />
+                            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                              <Calendar className="w-5 h-5 text-gray-400" />
+                            </div>
                           </div>
+                        )}
+                        
+                        {field.type === 'number' && (
+                          <Input
+                            id={field.name}
+                            type="number"
+                            value={formValues[activeTab]?.[field.name] || ''}
+                            onChange={(e) => handleFormChange(activeTab, field.name, e.target.value)}
+                            className="w-full p-3 border border-gray-300 rounded-md"
+                          />
+                        )}
+                        
+                        {field.type === 'textarea' && (
+                          <Textarea
+                            id={field.name}
+                            placeholder="Enter description..."
+                            value={formValues[activeTab]?.[field.name] || ''}
+                            onChange={(e) => handleFormChange(activeTab, field.name, e.target.value)}
+                            className="w-full p-3 border border-gray-300 rounded-md min-h-[120px]"
+                          />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {/* Documents Section */}
+              {configurationArray.find(stage => stage.stageName === activeTab)?.documents && (
+                <div className="mb-8">
+                  <h4 className="text-lg font-medium mb-4">Required Documents</h4>
+                  
+                  {configurationArray.find(stage => stage.stageName === activeTab)?.documents?.map(doc => (
+                    <div key={doc.name} className="border border-gray-200 rounded-lg p-4 mb-4">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <div className="flex items-center mb-1">
+                            <h5 className="font-medium">{doc.name}</h5>
+                            {doc.mandatory === "true" && (
+                              <span className="ml-1 text-red-500 text-lg">*</span>
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-500">Format: {doc.allowedFormat.join(", ")}</p>
                         </div>
-                      )}
-                      
-                      {field.type === 'number' && (
-                        <Input
-                          id={field.name}
-                          type="number"
-                          value={formValues[activeTab]?.[field.name] || ''}
-                          onChange={(e) => handleFormChange(activeTab, field.name, e.target.value)}
-                          className="w-full p-3 border border-gray-300 rounded-md"
-                        />
-                      )}
-                      
-                      {field.type === 'textarea' && (
-                        <Textarea
-                          id={field.name}
-                          placeholder="Enter description..."
-                          value={formValues[activeTab]?.[field.name] || ''}
-                          onChange={(e) => handleFormChange(activeTab, field.name, e.target.value)}
-                          className="w-full p-3 border border-gray-300 rounded-md min-h-[120px]"
-                        />
-                      )}
+                        <div className="flex items-center">
+                          <Button variant="outline" className="bg-gray-100 mr-2">
+                            Choose File
+                            <Upload className="ml-2 h-4 w-4" />
+                          </Button>
+                          <span className="text-gray-500 text-sm">No file chosen</span>
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
-            
-            {/* Documents Section */}
-            {configurationArray.find(stage => stage.stageName === activeTab)?.documents && (
-              <div className="mb-8">
-                <h4 className="text-lg font-medium mb-4">Required Documents</h4>
-                
-                {configurationArray.find(stage => stage.stageName === activeTab)?.documents?.map(doc => (
-                  <div key={doc.name} className="border border-gray-200 rounded-lg p-4 mb-4">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <div className="flex items-center mb-1">
-                          <h5 className="font-medium">{doc.name}</h5>
-                          {doc.mandatory === "true" && (
-                            <span className="ml-1 text-red-500 text-lg">*</span>
-                          )}
-                        </div>
-                        <p className="text-sm text-gray-500">Format: {doc.allowedFormat.join(", ")}</p>
-                      </div>
-                      <div className="flex items-center">
-                        <Button variant="outline" className="bg-gray-100 mr-2">
-                          Choose File
-                          <Upload className="ml-2 h-4 w-4" />
-                        </Button>
-                        <span className="text-gray-500 text-sm">No file chosen</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-            
-            {/* Action Buttons */}
-            <div className="flex justify-end space-x-4 mt-8">
-              <Button 
-                variant="outline" 
-                onClick={handleSaveForLater}
-                disabled={isSaving}
-                className="border-gray-300 text-gray-700"
-              >
-                {isSaving ? 'Saving...' : 'Save for Later'}
-                {!isSaving && <Save className="ml-2 h-4 w-4" />}
-              </Button>
+              )}
               
-              <Button 
-                onClick={handleSubmit}
-                disabled={isSubmitting}
-                className="bg-claims-blue hover:bg-claims-blue-dark"
-              >
-                {isSubmitting ? 'Submitting...' : 'Submit'}
-                {!isSubmitting && <ArrowRight className="ml-2 h-4 w-4" />}
-              </Button>
-            </div>
+              {/* Action Buttons - Always show them */}
+              <div className="flex justify-end space-x-4 mt-8 sticky bottom-0 bg-white pt-4 pb-2">
+                <Button 
+                  variant="outline" 
+                  onClick={handleSaveForLater}
+                  disabled={isSaving}
+                  className="border-gray-300 text-gray-700"
+                >
+                  {isSaving ? 'Saving...' : 'Save for Later'}
+                  {!isSaving && <Save className="ml-2 h-4 w-4" />}
+                </Button>
+                
+                <Button 
+                  onClick={handleSubmit}
+                  disabled={isSubmitting}
+                  className="bg-claims-blue hover:bg-claims-blue-dark"
+                >
+                  {isSubmitting ? 'Submitting...' : 'Submit'}
+                  {!isSubmitting && <ArrowRight className="ml-2 h-4 w-4" />}
+                </Button>
+              </div>
+            </ScrollArea>
           </div>
         )}
       </div>
