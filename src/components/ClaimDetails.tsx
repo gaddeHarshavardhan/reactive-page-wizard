@@ -251,6 +251,26 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
     }
   }, [claimData]);
 
+  // Get a stage's completion status based on timeline progression
+  const isStageCompleted = (stageName: string): boolean => {
+    if (!claimData || !claimData.currentStage) return false;
+    const currentStageIndex = getCurrentStageIndex();
+    const stageIndex = getStageIndex(stageName);
+    return stageIndex < currentStageIndex;
+  };
+
+  // Check if the claim is in completed status
+  const isClaimCompleted = (): boolean => {
+    return claimData?.status === "Completed";
+  };
+
+  // Handle stage selection - allow viewing completed stages
+  const handleStageSelect = (stageName: string) => {
+    if (isStageCompleted(stageName) || stageName === claimData?.currentStage) {
+      setActiveTab(stageName);
+    }
+  };
+
   const getStageIndex = (stageName: string): number => {
     if (!claimConfig || !claimConfig.configuration) return -1;
     return claimConfig.configuration.findIndex(stage => stage.stageName === stageName);
@@ -398,7 +418,9 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
           <div className="mb-4">
             <span className="text-gray-500">Status:</span>
             <span className="ml-2">
-              <span className="bg-blue-500 text-white px-4 py-1 rounded-full text-sm">
+              <span className={`${
+                isClaimCompleted() ? "bg-green-500" : "bg-blue-500"
+              } text-white px-4 py-1 rounded-full text-sm`}>
                 {claimData.status}
               </span>
             </span>
@@ -410,12 +432,19 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
         </div>
       </div>
       
-      {/* Claim Progress Timeline */}
+      {/* Claim Progress Timeline - Updated to be clickable for completed stages */}
       <div className="flex justify-center items-center py-8">
         {configurationArray.length > 0 ? (
           configurationArray.map((stage, index) => (
             <React.Fragment key={stage.stageName}>
-              <div className="flex flex-col items-center">
+              <div 
+                className={`flex flex-col items-center ${
+                  isStageCompleted(stage.stageName) || stage.stageName === claimData.currentStage 
+                    ? "cursor-pointer" 
+                    : "cursor-not-allowed"
+                }`}
+                onClick={() => handleStageSelect(stage.stageName)}
+              >
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
                   index < currentStageIndex 
                     ? 'bg-green-500 text-white' 
@@ -429,7 +458,11 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
                     index + 1
                   )}
                 </div>
-                <span className="text-sm mt-2 text-center max-w-[120px]">{stage.stageName}</span>
+                <span className={`text-sm mt-2 text-center max-w-[120px] ${
+                  activeTab === stage.stageName ? "font-bold" : ""
+                }`}>
+                  {stage.stageName}
+                </span>
               </div>
               
               {index < configurationArray.length - 1 && (
@@ -450,6 +483,12 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
           <div>
             <h3 className="text-xl font-medium mb-6">
               {activeTab}
+              {isStageCompleted(activeTab) && (
+                <span className="ml-3 text-green-500 text-sm inline-flex items-center">
+                  <Check className="h-4 w-4 mr-1" />
+                  Completed
+                </span>
+              )}
             </h3>
             
             <ScrollArea className="h-[500px] pr-4">
@@ -477,6 +516,7 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
                             value={formValues[activeTab]?.[field.name] || ''}
                             onChange={(e) => handleFormChange(activeTab, field.name, e.target.value)}
                             className="w-full p-3 border border-gray-300 rounded-md"
+                            readOnly={isStageCompleted(activeTab) || isClaimCompleted()}
                           />
                         )}
                         
@@ -488,6 +528,7 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
                               value={formValues[activeTab]?.[field.name] || ''}
                               onChange={(e) => handleFormChange(activeTab, field.name, e.target.value)}
                               className="w-full p-3 border border-gray-300 rounded-md"
+                              readOnly={isStageCompleted(activeTab) || isClaimCompleted()}
                             />
                             <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                               <Calendar className="w-5 h-5 text-gray-400" />
@@ -502,6 +543,7 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
                             value={formValues[activeTab]?.[field.name] || ''}
                             onChange={(e) => handleFormChange(activeTab, field.name, e.target.value)}
                             className="w-full p-3 border border-gray-300 rounded-md"
+                            readOnly={isStageCompleted(activeTab) || isClaimCompleted()}
                           />
                         )}
                         
@@ -512,6 +554,7 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
                             value={formValues[activeTab]?.[field.name] || ''}
                             onChange={(e) => handleFormChange(activeTab, field.name, e.target.value)}
                             className="w-full p-3 border border-gray-300 rounded-md min-h-[120px]"
+                            readOnly={isStageCompleted(activeTab) || isClaimCompleted()}
                           />
                         )}
                       </div>
@@ -538,7 +581,11 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
                           <p className="text-sm text-gray-500">Format: {doc.allowedFormat.join(", ")}</p>
                         </div>
                         <div className="flex items-center">
-                          <Button variant="outline" className="bg-gray-100 mr-2">
+                          <Button 
+                            variant="outline" 
+                            className="bg-gray-100 mr-2"
+                            disabled={isStageCompleted(activeTab) || isClaimCompleted()}
+                          >
                             Choose File
                             <Upload className="ml-2 h-4 w-4" />
                           </Button>
@@ -550,27 +597,29 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
                 </div>
               )}
               
-              {/* Action Buttons - Always show them */}
-              <div className="flex justify-end space-x-4 mt-8 sticky bottom-0 bg-white pt-4 pb-2">
-                <Button 
-                  variant="outline" 
-                  onClick={handleSaveForLater}
-                  disabled={isSaving}
-                  className="border-gray-300 text-gray-700"
-                >
-                  {isSaving ? 'Saving...' : 'Save for Later'}
-                  {!isSaving && <Save className="ml-2 h-4 w-4" />}
-                </Button>
-                
-                <Button 
-                  onClick={handleSubmit}
-                  disabled={isSubmitting}
-                  className="bg-claims-blue hover:bg-claims-blue-dark"
-                >
-                  {isSubmitting ? 'Submitting...' : 'Submit'}
-                  {!isSubmitting && <ArrowRight className="ml-2 h-4 w-4" />}
-                </Button>
-              </div>
+              {/* Action Buttons - Only show for current stage and if claim is not completed */}
+              {activeTab === claimData.currentStage && !isClaimCompleted() && (
+                <div className="flex justify-end space-x-4 mt-8 sticky bottom-0 bg-white pt-4 pb-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={handleSaveForLater}
+                    disabled={isSaving || isClaimCompleted()}
+                    className="border-gray-300 text-gray-700"
+                  >
+                    {isSaving ? 'Saving...' : 'Save for Later'}
+                    {!isSaving && <Save className="ml-2 h-4 w-4" />}
+                  </Button>
+                  
+                  <Button 
+                    onClick={handleSubmit}
+                    disabled={isSubmitting || isClaimCompleted()}
+                    className="bg-claims-blue hover:bg-claims-blue-dark"
+                  >
+                    {isSubmitting ? 'Submitting...' : 'Submit'}
+                    {!isSubmitting && <ArrowRight className="ml-2 h-4 w-4" />}
+                  </Button>
+                </div>
+              )}
             </ScrollArea>
           </div>
         )}
