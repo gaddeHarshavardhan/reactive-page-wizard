@@ -352,13 +352,22 @@ const Index = () => {
       stages: stages.map(stageName => {
         return {
           stageName: stageName,
-          fields: formFields[stageName]?.map(field => ({
-            name: field.fieldLabel,
-            type: field.fieldType.toLowerCase(),
-            mandatory: field.mandatory,
-            validation: field.validation,
-            options: field.options // Include options for dropdowns and radio buttons
-          })) || [],
+          fields: formFields[stageName]?.map(field => {
+            // Create the base field object
+            const fieldObj: any = {
+              name: field.fieldLabel,
+              type: field.fieldType.toLowerCase(),
+              mandatory: field.mandatory,
+              validation: field.validation,
+            };
+            
+            // Add options array for dropdown and radio buttons
+            if (field.fieldType === "Dropdown" || field.fieldType === "Radio Buttons") {
+              fieldObj.options = field.options || [];
+            }
+            
+            return fieldObj;
+          }) || [],
           documents: documents[stageName]?.map(doc => ({
             name: doc.documentType,
             mandatory: doc.mandatory,
@@ -431,13 +440,22 @@ const Index = () => {
       stages: stages.map(stageName => {
         return {
           stageName: stageName,
-          fields: formFields[stageName]?.map(field => ({
-            name: field.fieldLabel,
-            type: field.fieldType.toLowerCase(),
-            mandatory: field.mandatory,
-            validation: field.validation,
-            options: field.options
-          })) || [],
+          fields: formFields[stageName]?.map(field => {
+            // Create the base field object
+            const fieldObj: any = {
+              name: field.fieldLabel,
+              type: field.fieldType.toLowerCase(),
+              mandatory: field.mandatory,
+              validation: field.validation,
+            };
+            
+            // Add options array for dropdown and radio buttons
+            if (field.fieldType === "Dropdown" || field.fieldType === "Radio Buttons") {
+              fieldObj.options = field.options || [];
+            }
+            
+            return fieldObj;
+          }) || [],
           documents: documents[stageName]?.map(doc => ({
             name: doc.documentType,
             mandatory: doc.mandatory,
