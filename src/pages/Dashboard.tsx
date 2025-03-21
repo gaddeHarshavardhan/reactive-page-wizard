@@ -13,7 +13,7 @@ const Dashboard = () => {
       <header className="bg-claims-blue py-5 px-8 text-white">
         <div className="max-w-7xl mx-auto">
           <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-medium animate-fade-in">Mobile Protection Claims System</h1>
+            <h1 className="text-2xl font-medium animate-fade-in">Claims System</h1>
             <div className="text-lg animate-fade-in">Select an option to continue</div>
           </div>
         </div>
