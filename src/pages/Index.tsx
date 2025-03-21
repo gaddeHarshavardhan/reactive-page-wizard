@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ClaimStage from '@/components/ClaimStage';
@@ -299,9 +298,8 @@ const Index = () => {
     toast.success("Document removed");
   };
 
-  // Function to add a new action
+  // Function to add a new action - removed next stage validation
   const handleAddAction = () => {
-    // Removed next stage validation
     setActions({
       ...actions,
       [activeStage]: [...(actions[activeStage] || []), newAction]
@@ -344,7 +342,7 @@ const Index = () => {
     }
   };
 
-  // Function to save configuration and navigate to form
+  // Function to save configuration and navigate to form with preview mode
   const handleSaveAndPreview = async () => {
     setIsSaving(true);
     
@@ -368,7 +366,10 @@ const Index = () => {
           })) || [],
           actions: actions[stageName]?.map(action => ({
             option: action.action.toLowerCase(),
-            stage: action.nextStage
+            stage: action.nextStage,
+            // Set all actions as view-only in preview mode
+            buttonLabel: action.action,
+            condition: "All fields valid"
           })) || []
         };
       })
@@ -381,14 +382,38 @@ const Index = () => {
       localStorage.setItem('claimConfig', JSON.stringify(transformedData));
       localStorage.setItem('previewMode', 'true'); // Add flag for preview mode
       
-      setIsSaving(false);
-      toast.success("Configuration saved and ready for preview");
-      
-      // Navigate to the claim form page
-      setTimeout(() => {
-        navigate('/claim-form');
-      }, 1000);
-      
+      // Also call the save configuration API endpoint like in handleSaveConfiguration
+      const response = await fetch('https://localhost:9000', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(transformedData),
+      }).then(
+        (res) => {
+          console.log(res);
+          toast.success("Configuration saved and ready for preview");
+          
+          // Navigate to the claim form page
+          setTimeout(() => {
+            navigate('/claim-form');
+          }, 1000);
+        }
+      ).catch(
+        (error) => { 
+          console.log(error);
+          toast.error("Configuration save failed, but preview is available");
+          
+          // Still navigate to preview even if API call fails
+          setTimeout(() => {
+            navigate('/claim-form');
+          }, 1000);
+        }
+      ).finally(
+        () => {
+          setIsSaving(false);
+        }
+      );
     } catch (error) {
       console.error("Error saving configuration:", error);
       setIsSaving(false);
@@ -902,89 +927,3 @@ const Index = () => {
                     type="checkbox"
                     checked={newDocument.mandatory}
                     onChange={(e) => setNewDocument({...newDocument, mandatory: e.target.checked})}
-                    className="mr-2"
-                  />
-                  <label>Required document</label>
-                </div>
-              </div>
-            </div>
-            
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsAddDocumentOpen(false)}>Cancel</Button>
-              <Button onClick={handleAddDocument}>Add Document</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Add Action Dialog - Simplified */}
-        <Dialog open={isAddActionOpen} onOpenChange={setIsAddActionOpen}>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Add New Action</DialogTitle>
-            </DialogHeader>
-            
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label htmlFor="action" className="text-right">Action</label>
-                <select
-                  id="action"
-                  value={newAction.action}
-                  onChange={(e) => setNewAction({...newAction, action: e.target.value})}
-                  className="col-span-3 border p-2 rounded"
-                >
-                  <option value="Submit">Submit</option>
-                  <option value="Save">Save</option>
-                </select>
-              </div>
-              
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label htmlFor="nextStage" className="text-right">Next Stage</label>
-                <select
-                  id="nextStage"
-                  value={newAction.nextStage}
-                  onChange={(e) => setNewAction({...newAction, nextStage: e.target.value})}
-                  className="col-span-3 border p-2 rounded"
-                >
-                  <option value="">Select next stage...</option>
-                  {getAvailableNextStages().map(stage => (
-                    <option key={stage} value={stage}>{stage}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsAddActionOpen(false)}>Cancel</Button>
-              <Button onClick={handleAddAction}>Add Action</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Footer with Buttons */}
-        <div className="flex justify-end gap-4 mt-8 mb-12">
-          <Button 
-            variant="outline" 
-            onClick={() => navigate('/')}
-          >
-            Back to Dashboard
-          </Button>
-          <Button 
-            onClick={handleSaveAndPreview}
-            disabled={isSaving}
-            className="bg-claims-blue hover:bg-claims-blue-dark"
-          >
-            Save &amp; Preview
-          </Button>
-          <Button 
-            onClick={handleSaveConfiguration}
-            disabled={isSaving}
-          >
-            Save Configuration
-          </Button>
-        </div>
-      </main>
-    </div>
-  );
-};
-
-export default Index;

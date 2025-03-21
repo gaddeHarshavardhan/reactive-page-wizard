@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -20,6 +19,7 @@ interface Field {
   type: string;
   mandatory: boolean;
   validation: string;
+  options?: string[];
 }
 
 interface DocumentSpec {
@@ -66,10 +66,14 @@ const ClaimForm = () => {
   const [formValues, setFormValues] = useState<FormValues>({});
   const [uploadedDocuments, setUploadedDocuments] = useState<UploadedDocument[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPreviewMode, setIsPreviewMode] = useState(false);
 
   // Load configuration from localStorage
   useEffect(() => {
     const storedConfig = localStorage.getItem('claimConfig');
+    const previewMode = localStorage.getItem('previewMode') === 'true';
+    setIsPreviewMode(previewMode);
+    
     if (storedConfig) {
       try {
         const parsedConfig = JSON.parse(storedConfig);
@@ -91,14 +95,18 @@ const ClaimForm = () => {
 
   // Handle form value changes
   const handleInputChange = (name: string, value: any) => {
-    setFormValues(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    if (!isPreviewMode) {
+      setFormValues(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
   };
 
   // Handle document upload
   const handleDocumentUpload = (documentName: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    if (isPreviewMode) return; // Disable uploads in preview mode
+    
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -136,8 +144,13 @@ const ClaimForm = () => {
     toast.success(`Uploaded: ${file.name}`);
   };
 
-  // Handle form actions
+  // Handle form actions - modified to check preview mode
   const handleAction = (action: Action) => {
+    if (isPreviewMode) {
+      toast.info('This is a preview. Actions are disabled.');
+      return;
+    }
+    
     setIsSubmitting(true);
 
     // Validate required fields if action requires it
@@ -181,6 +194,13 @@ const ClaimForm = () => {
     }, 1000);
   };
 
+  // Handle stage selection in preview mode
+  const handlePreviewStageSelect = (index: number) => {
+    if (isPreviewMode) {
+      setCurrentStageIndex(index);
+    }
+  };
+
   // Render loading state if config is not loaded
   if (!config || !currentStage) {
     return (
@@ -199,43 +219,44 @@ const ClaimForm = () => {
         <div className="max-w-3xl mx-auto">
           <div className="flex justify-between items-center">
             <h1 className="text-2xl font-medium animate-fade-in">Mobile Protection Claim</h1>
-            <div className="text-lg animate-fade-in">Claim #MP-2023112233</div>
+            <div className="text-lg animate-fade-in">
+              {isPreviewMode ? "Preview Mode" : "Claim #MP-2023112233"}
+            </div>
           </div>
         </div>
       </header>
 
-      {/* Progress Indicators */}
+      {/* Progress Indicators - modified for preview mode */}
       <div className="max-w-3xl mx-auto px-4 mt-8">
         <div className="flex items-center justify-start mb-8">
           {config.stages.map((stage, index) => (
             <React.Fragment key={stage.stageName}>
               <div 
                 className={cn(
-                  "rounded-full w-10 h-10 flex items-center justify-center font-semibold",
-                  index < currentStageIndex 
-                    ? "bg-claims-green text-white" 
-                    : index === currentStageIndex 
-                      ? "bg-claims-blue text-white" 
-                      : "bg-gray-200 text-gray-600"
+                  "rounded-full w-10 h-10 flex items-center justify-center font-semibold cursor-pointer",
+                  index === currentStageIndex 
+                    ? "bg-claims-blue text-white" 
+                    : "bg-gray-200 text-gray-600 hover:bg-gray-300"
                 )}
+                onClick={() => isPreviewMode && handlePreviewStageSelect(index)}
               >
-                {index < currentStageIndex ? (
-                  <Check className="w-5 h-5" />
-                ) : (
-                  index + 1
-                )}
+                {index + 1}
               </div>
               {index < config.stages.length - 1 && (
-                <div 
-                  className={cn(
-                    "h-1 w-16", 
-                    index < currentStageIndex ? "bg-claims-green" : "bg-gray-200"
-                  )}
-                ></div>
+                <div className="h-1 w-16 bg-gray-200"></div>
               )}
             </React.Fragment>
           ))}
         </div>
+        
+        {isPreviewMode && (
+          <div className="mb-4 bg-amber-50 border border-amber-200 p-3 rounded-md">
+            <p className="text-amber-800">
+              <strong>Preview Mode:</strong> This is a preview of your claim form configuration. 
+              Click on the stage numbers above to preview different stages. Form submission is disabled.
+            </p>
+          </div>
+        )}
         
         <div className="mb-4">
           <div className="flex items-center">
@@ -272,6 +293,7 @@ const ClaimForm = () => {
                       onChange={(e) => handleInputChange(field.name, e.target.value)}
                       placeholder={`Enter ${field.name.toLowerCase()}`}
                       className="w-full"
+                      disabled={isPreviewMode}
                     />
                   )}
                   {field.type === 'number' && (
@@ -282,26 +304,23 @@ const ClaimForm = () => {
                       onChange={(e) => handleInputChange(field.name, e.target.value)}
                       placeholder={`Enter ${field.name.toLowerCase()}`}
                       className="w-full"
+                      disabled={isPreviewMode}
                     />
                   )}
                   {field.type === 'dropdown' && (
                     <Select 
                       value={formValues[field.name] || ''}
                       onValueChange={(value) => handleInputChange(field.name, value)}
+                      disabled={isPreviewMode}
                     >
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder={`Select ${field.name.toLowerCase()}`} />
                       </SelectTrigger>
                       <SelectContent>
-                        {field.name === 'Device Model' ? (
-                          <>
-                            <SelectItem value="iphone-13">iPhone 13</SelectItem>
-                            <SelectItem value="iphone-14">iPhone 14</SelectItem>
-                            <SelectItem value="iphone-15">iPhone 15</SelectItem>
-                            <SelectItem value="galaxy-s22">Galaxy S22</SelectItem>
-                            <SelectItem value="galaxy-s23">Galaxy S23</SelectItem>
-                            <SelectItem value="pixel-7">Pixel 7</SelectItem>
-                          </>
+                        {field.options && field.options.length > 0 ? (
+                          field.options.map((option, idx) => (
+                            <SelectItem key={idx} value={option}>{option}</SelectItem>
+                          ))
                         ) : (
                           <SelectItem value="option">Option</SelectItem>
                         )}
@@ -313,26 +332,15 @@ const ClaimForm = () => {
                       value={formValues[field.name] || ''}
                       onValueChange={(value) => handleInputChange(field.name, value)}
                       className="flex flex-col space-y-2"
+                      disabled={isPreviewMode}
                     >
-                      {field.name === 'Issue Type' ? (
-                        <>
-                          <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="screen-damage" id="screen-damage" />
-                            <Label htmlFor="screen-damage">Screen Damage</Label>
+                      {field.options && field.options.length > 0 ? (
+                        field.options.map((option, idx) => (
+                          <div key={idx} className="flex items-center space-x-2">
+                            <RadioGroupItem value={option} id={`${field.name}-${idx}`} />
+                            <Label htmlFor={`${field.name}-${idx}`}>{option}</Label>
                           </div>
-                          <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="battery-issue" id="battery-issue" />
-                            <Label htmlFor="battery-issue">Battery Issue</Label>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="not-powering-on" id="not-powering-on" />
-                            <Label htmlFor="not-powering-on">Not Powering On</Label>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="water-damage" id="water-damage" />
-                            <Label htmlFor="water-damage">Water Damage</Label>
-                          </div>
-                        </>
+                        ))
                       ) : (
                         <div className="flex items-center space-x-2">
                           <RadioGroupItem value="option" id="option" />
@@ -349,6 +357,7 @@ const ClaimForm = () => {
                         onCheckedChange={(checked) => 
                           handleInputChange(field.name, checked === true)
                         }
+                        disabled={isPreviewMode}
                       />
                       <Label htmlFor={field.name}>Yes</Label>
                     </div>
@@ -363,6 +372,7 @@ const ClaimForm = () => {
                               "w-full justify-start text-left font-normal",
                               !formValues[field.name] && "text-muted-foreground"
                             )}
+                            disabled={isPreviewMode}
                           >
                             <CalendarIcon className="mr-2 h-4 w-4" />
                             {formValues[field.name] ? format(formValues[field.name], "PPP") : `Select ${field.name.toLowerCase()}`}
@@ -374,6 +384,7 @@ const ClaimForm = () => {
                             selected={formValues[field.name]}
                             onSelect={(date) => handleInputChange(field.name, date)}
                             initialFocus
+                            disabled={isPreviewMode}
                           />
                         </PopoverContent>
                       </Popover>
@@ -420,36 +431,44 @@ const ClaimForm = () => {
                               {(uploadedDoc.size / 1024 / 1024).toFixed(2)}MB • {uploadedDoc.format}
                             </p>
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-red-500"
-                            onClick={() => {
-                              setUploadedDocuments(prev => 
-                                prev.filter(u => u.documentName !== doc.name)
-                              );
-                              toast.info(`Removed ${doc.name}`);
-                            }}
-                          >
-                            Remove
-                          </Button>
+                          {!isPreviewMode && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-red-500"
+                              onClick={() => {
+                                setUploadedDocuments(prev => 
+                                  prev.filter(u => u.documentName !== doc.name)
+                                );
+                                toast.info(`Removed ${doc.name}`);
+                              }}
+                            >
+                              Remove
+                            </Button>
+                          )}
                         </div>
                       ) : (
                         <div className="flex items-center">
                           <Label 
                             htmlFor={`upload-${doc.name}`}
-                            className="flex items-center px-4 py-2 border border-gray-300 rounded text-sm cursor-pointer hover:bg-gray-50"
+                            className={cn(
+                              "flex items-center px-4 py-2 border border-gray-300 rounded text-sm",
+                              isPreviewMode ? "bg-gray-100 text-gray-500" : "cursor-pointer hover:bg-gray-50"
+                            )}
                           >
                             <Upload className="w-4 h-4 mr-2" />
                             Upload {doc.name}
                           </Label>
-                          <Input
-                            id={`upload-${doc.name}`}
-                            type="file"
-                            className="hidden"
-                            onChange={(e) => handleDocumentUpload(doc.name, e)}
-                            accept={doc.allowedFormat.map(format => `.${format.toLowerCase()}`).join(',')}
-                          />
+                          {!isPreviewMode && (
+                            <Input
+                              id={`upload-${doc.name}`}
+                              type="file"
+                              className="hidden"
+                              onChange={(e) => handleDocumentUpload(doc.name, e)}
+                              accept={doc.allowedFormat.map(format => `.${format.toLowerCase()}`).join(',')}
+                              disabled={isPreviewMode}
+                            />
+                          )}
                         </div>
                       )}
                     </div>
@@ -462,30 +481,41 @@ const ClaimForm = () => {
 
         {/* Action Buttons */}
         <div className="flex justify-end space-x-4 mt-8">
-          {currentStage.actions.map((action, index) => (
+          {isPreviewMode ? (
+            // Preview mode shows a button to return to configuration
             <Button
-              key={index}
-              variant={action.option === 'submit' ? 'default' : action.option === 'cancel' ? 'outline' : 'secondary'}
-              className={action.option === 'submit' ? 'bg-claims-blue hover:bg-claims-blue-dark' : ''}
-              onClick={() => handleAction(action)}
-              disabled={isSubmitting}
+              variant="outline"
+              onClick={() => navigate('/')}
             >
-              {isSubmitting ? (
-                <div className="flex items-center">
-                  <div className="w-4 h-4 border-2 border-t-transparent border-white rounded-full animate-spin mr-2"></div>
-                  Processing...
-                </div>
-              ) : (
-                <>
-                  {action.buttonLabel}
-                  {action.option === 'submit' && <ChevronRight className="ml-2 w-4 h-4" />}
-                </>
-              )}
+              Back to Configuration
             </Button>
-          ))}
+          ) : (
+            // Regular action buttons for normal mode
+            currentStage.actions.map((action, index) => (
+              <Button
+                key={index}
+                variant={action.option === 'submit' ? 'default' : action.option === 'cancel' ? 'outline' : 'secondary'}
+                className={action.option === 'submit' ? 'bg-claims-blue hover:bg-claims-blue-dark' : ''}
+                onClick={() => handleAction(action)}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <div className="flex items-center">
+                    <div className="w-4 h-4 border-2 border-t-transparent border-white rounded-full animate-spin mr-2"></div>
+                    Processing...
+                  </div>
+                ) : (
+                  <>
+                    {action.buttonLabel || action.option}
+                    {action.option === 'submit' && <ChevronRight className="ml-2 w-4 h-4" />}
+                  </>
+                )}
+              </Button>
+            ))
+          )}
           
-          {/* If no actions are defined, show back button */}
-          {currentStage.actions.length === 0 && (
+          {/* If no actions are defined and not in preview mode, show back button */}
+          {currentStage.actions.length === 0 && !isPreviewMode && (
             <Button
               variant="outline"
               onClick={() => navigate('/')}
