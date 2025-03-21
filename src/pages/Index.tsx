@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ClaimStage from '@/components/ClaimStage';
@@ -952,4 +953,73 @@ const Index = () => {
 
         {/* Add Action Dialog - Simplified */}
         <Dialog open={isAddActionOpen} onOpenChange={setIsAddActionOpen}>
-          <DialogContent className="sm:max-w-[425px
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Add New Action</DialogTitle>
+            </DialogHeader>
+            
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <label htmlFor="action" className="text-right">Action</label>
+                <select
+                  id="action"
+                  value={newAction.action}
+                  onChange={(e) => setNewAction({...newAction, action: e.target.value})}
+                  className="col-span-3 border p-2 rounded"
+                >
+                  <option value="Submit">Submit</option>
+                  <option value="Save">Save</option>
+                </select>
+              </div>
+              
+              <div className="grid grid-cols-4 items-center gap-4">
+                <label htmlFor="nextStage" className="text-right">Next Stage</label>
+                <select
+                  id="nextStage"
+                  value={newAction.nextStage}
+                  onChange={(e) => setNewAction({...newAction, nextStage: e.target.value})}
+                  className="col-span-3 border p-2 rounded"
+                >
+                  <option value="">Select next stage...</option>
+                  {getAvailableNextStages().map(stage => (
+                    <option key={stage} value={stage}>{stage}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsAddActionOpen(false)}>Cancel</Button>
+              <Button onClick={handleAddAction}>Add Action</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Footer with Buttons */}
+        <div className="flex justify-end gap-4 mt-8 mb-12">
+          <Button 
+            variant="outline" 
+            onClick={() => navigate('/')}
+          >
+            Back to Dashboard
+          </Button>
+          <Button 
+            onClick={handleSaveAndPreview}
+            disabled={isSaving}
+            className="bg-claims-blue hover:bg-claims-blue-dark"
+          >
+            Save &amp; Preview
+          </Button>
+          <Button 
+            onClick={handleSaveConfiguration}
+            disabled={isSaving}
+          >
+            Save Configuration
+          </Button>
+        </div>
+      </main>
+    </div>
+  );
+};
+
+export default Index;
