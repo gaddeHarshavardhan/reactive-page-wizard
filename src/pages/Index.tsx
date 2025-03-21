@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ClaimStage from '@/components/ClaimStage';
@@ -927,3 +928,80 @@ const Index = () => {
                     type="checkbox"
                     checked={newDocument.mandatory}
                     onChange={(e) => setNewDocument({...newDocument, mandatory: e.target.checked})}
+                    className="mr-2"
+                  />
+                  <label>Required document</label>
+                </div>
+              </div>
+            </div>
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsAddDocumentOpen(false)}>Cancel</Button>
+              <Button onClick={handleAddDocument}>Add Document</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Add Action Dialog */}
+        <Dialog open={isAddActionOpen} onOpenChange={setIsAddActionOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Add New Action</DialogTitle>
+            </DialogHeader>
+            
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <label htmlFor="actionType" className="text-right">Action</label>
+                <input
+                  id="actionType"
+                  value={newAction.action}
+                  onChange={(e) => setNewAction({...newAction, action: e.target.value})}
+                  className="col-span-3 border p-2 rounded"
+                />
+              </div>
+              
+              <div className="grid grid-cols-4 items-center gap-4">
+                <label htmlFor="nextStage" className="text-right">Next Stage</label>
+                <select
+                  id="nextStage"
+                  value={newAction.nextStage}
+                  onChange={(e) => setNewAction({...newAction, nextStage: e.target.value})}
+                  className="col-span-3 border p-2 rounded"
+                >
+                  <option value="">Select a stage...</option>
+                  {stages.map((stage) => (
+                    <option key={stage} value={stage}>{stage}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsAddActionOpen(false)}>Cancel</Button>
+              <Button onClick={handleAddAction}>Add Action</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Footer buttons */}
+        <div className="flex justify-end mt-8 space-x-4">
+          <Button 
+            onClick={handleSaveConfiguration} 
+            variant="outline"
+            disabled={isSaving || stages.length === 0}
+          >
+            Save Configuration
+          </Button>
+          <Button 
+            onClick={handleSaveAndPreview}
+            disabled={isSaving || stages.length === 0}
+          >
+            Save & Preview
+          </Button>
+        </div>
+      </main>
+    </div>
+  );
+};
+
+export default Index;
