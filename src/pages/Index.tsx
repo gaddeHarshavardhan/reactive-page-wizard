@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ClaimStage from '@/components/ClaimStage';
@@ -22,7 +21,6 @@ interface FormField {
   fieldLabel: string;
   fieldType: string;
   mandatory: boolean;
-  validation: string;
   options?: string[]; // Added options for dropdown and radio buttons
 }
 
@@ -30,7 +28,6 @@ interface Document {
   documentType: string;
   format: string[];
   mandatory: boolean;
-  maxSize: number;
 }
 
 interface Action {
@@ -40,8 +37,13 @@ interface Action {
 
 const formatOptions = ["PDF", "JPG", "PNG", "TXT"];
 
-// Predefined lists for categories and services
-const categoryOptions = ["PE", "HA", "Motor"];
+// Updated category options with full display text and values
+const categoryOptions = [
+  { display: "Personal Electronics", value: "PE" },
+  { display: "Home Appliances", value: "HA" },
+  { display: "Motor", value: "Motor" }
+];
+
 const serviceOptions: Record<string, string[]> = {
   "PE": ["ADLD", "EW"],
   "HA": ["EW", "PMS"],
@@ -70,7 +72,6 @@ const Index = () => {
     fieldLabel: "",
     fieldType: "Text",
     mandatory: false,
-    validation: "",
     options: []
   });
 
@@ -82,8 +83,7 @@ const Index = () => {
   const [newDocument, setNewDocument] = useState<Document>({
     documentType: "",
     format: ["PDF"],
-    mandatory: false,
-    maxSize: 10
+    mandatory: false
   });
 
   // State for add action dialog
@@ -97,8 +97,8 @@ const Index = () => {
   const [isSaving, setIsSaving] = useState(false);
 
   // Handle category change
-  const handleCategoryChange = (category: string) => {
-    setSelectedCategory(category);
+  const handleCategoryChange = (categoryValue: string) => {
+    setSelectedCategory(categoryValue);
     setSelectedService('');
   };
 
@@ -252,7 +252,6 @@ const Index = () => {
       fieldLabel: "",
       fieldType: "Text",
       mandatory: false,
-      validation: "",
       options: []
     });
     
@@ -317,8 +316,7 @@ const Index = () => {
     setNewDocument({
       documentType: "",
       format: ["PDF"],
-      mandatory: false,
-      maxSize: 10
+      mandatory: false
     });
     
     setIsAddDocumentOpen(false);
@@ -399,7 +397,6 @@ const Index = () => {
               name: field.fieldLabel,
               type: field.fieldType.toLowerCase(),
               mandatory: field.mandatory,
-              validation: field.validation,
             };
             
             // Add options array for dropdown and radio buttons
@@ -412,7 +409,6 @@ const Index = () => {
           documents: documents[stageName]?.map(doc => ({
             name: doc.documentType,
             mandatory: doc.mandatory,
-            maxSize: doc.maxSize,
             allowedFormat: doc.format
           })) || [],
           actions: actions[stageName]?.map(action => ({
@@ -489,7 +485,6 @@ const Index = () => {
               name: field.fieldLabel,
               type: field.fieldType.toLowerCase(),
               mandatory: field.mandatory,
-              validation: field.validation,
             };
             
             // Add options array for dropdown and radio buttons
@@ -502,7 +497,6 @@ const Index = () => {
           documents: documents[stageName]?.map(doc => ({
             name: doc.documentType,
             mandatory: doc.mandatory,
-            maxSize: doc.maxSize,
             allowedFormat: doc.format
           })) || [],
           actions: actions[stageName]?.map(action => {
@@ -583,8 +577,8 @@ const Index = () => {
                 </SelectTrigger>
                 <SelectContent>
                   {categoryOptions.map(category => (
-                    <SelectItem key={category} value={category}>
-                      {category}
+                    <SelectItem key={category.value} value={category.value}>
+                      {category.display}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -625,7 +619,7 @@ const Index = () => {
           {showConfigSection && (
             <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md flex justify-between items-center">
               <div>
-                <span className="font-medium">Selected:</span> {selectedCategory} - {selectedService}
+                <span className="font-medium">Selected:</span> {categoryOptions.find(c => c.value === selectedCategory)?.display} - {selectedService}
               </div>
               <Button 
                 variant="outline" 
@@ -684,10 +678,10 @@ const Index = () => {
                       <table className="w-full claims-table">
                         <thead>
                           <tr className="bg-claims-gray-light">
-                            <th className="w-1/4 rounded-tl-md">Field Label</th>
-                            <th className="w-1/4">Field Type</th>
+                            <th className="w-1/3 rounded-tl-md">Field Label</th>
+                            <th className="w-1/3">Field Type</th>
                             <th className="w-1/6 text-center">Mandatory</th>
-                            <th className="w-1/4">Validation/Options</th>
+                            <th className="w-1/6">Options</th>
                             <th className="w-1/12 rounded-tr-md">Actions</th>
                           </tr>
                         </thead>
@@ -722,7 +716,7 @@ const Index = () => {
                                     <span className="font-medium">Options:</span> {field.options?.join(", ")}
                                   </div>
                                 ) : (
-                                  field.validation
+                                  "-"
                                 )}
                               </td>
                               <td className="p-4 text-center">
@@ -765,10 +759,9 @@ const Index = () => {
                       <table className="w-full claims-table">
                         <thead>
                           <tr>
-                            <th className="w-1/4 rounded-tl-md">Document Type</th>
-                            <th className="w-1/4">Format</th>
-                            <th className="w-1/6 text-center">Mandatory</th>
-                            <th className="w-1/4">Max Size (MB)</th>
+                            <th className="w-1/3 rounded-tl-md">Document Type</th>
+                            <th className="w-1/3">Format</th>
+                            <th className="w-1/4 text-center">Mandatory</th>
                             <th className="w-1/12 rounded-tr-md">Actions</th>
                           </tr>
                         </thead>
@@ -797,7 +790,6 @@ const Index = () => {
                                   </div>
                                 )}
                               </td>
-                              <td className="p-4">{doc.maxSize} MB</td>
                               <td className="p-4 text-center">
                                 <button 
                                   onClick={() => handleRemoveDocument(index)}
@@ -811,7 +803,7 @@ const Index = () => {
                           ))}
                           {documents[activeStage]?.length === 0 && (
                             <tr>
-                              <td colSpan={5} className="p-4 text-center text-gray-500">
+                              <td colSpan={4} className="p-4 text-center text-gray-500">
                                 No documents added yet. Click "Add Document" to get started.
                               </td>
                             </tr>
@@ -957,189 +949,4 @@ const Index = () => {
                         {newField.options && newField.options.length > 0 && (
                           <div className="border rounded-md p-2 mt-2">
                             <p className="text-sm text-gray-500 mb-2">Added options:</p>
-                            <div className="space-y-1">
-                              {newField.options.map((option, index) => (
-                                <div key={index} className="flex justify-between items-center py-1 px-2 bg-gray-50 rounded">
-                                  <span>{option}</span>
-                                  <button 
-                                    type="button" 
-                                    onClick={() => handleRemoveOption(index)}
-                                    className="text-red-500 hover:text-red-700"
-                                  >
-                                    <X size={16} />
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {newField.fieldType !== "Dropdown" && newField.fieldType !== "Radio Buttons" && (
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <label htmlFor="validation" className="text-right">Validation</label>
-                      <input
-                        id="validation"
-                        value={newField.validation}
-                        onChange={(e) => setNewField({...newField, validation: e.target.value})}
-                        className="col-span-3 border p-2 rounded"
-                        placeholder="e.g., Required, Min length: 5"
-                      />
-                    </div>
-                  )}
-                  
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <div className="text-right">Mandatory</div>
-                    <div className="col-span-3">
-                      <input
-                        type="checkbox"
-                        checked={newField.mandatory}
-                        onChange={(e) => setNewField({...newField, mandatory: e.target.checked})}
-                        className="mr-2"
-                      />
-                      <label>Required field</label>
-                    </div>
-                  </div>
-                </div>
-                
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsAddFieldOpen(false)}>Cancel</Button>
-                  <Button onClick={handleAddField}>Add Field</Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-
-            {/* Add Document Dialog */}
-            <Dialog open={isAddDocumentOpen} onOpenChange={setIsAddDocumentOpen}>
-              <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                  <DialogTitle>Add New Document</DialogTitle>
-                </DialogHeader>
-                
-                <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <label htmlFor="documentType" className="text-right">Document Type</label>
-                    <input
-                      id="documentType"
-                      value={newDocument.documentType}
-                      onChange={(e) => setNewDocument({...newDocument, documentType: e.target.value})}
-                      className="col-span-3 border p-2 rounded"
-                    />
-                  </div>
-                  
-                  <div className="grid grid-cols-4 items-start gap-4">
-                    <label className="text-right pt-2">Format</label>
-                    <div className="col-span-3 flex flex-col space-y-2">
-                      {formatOptions.map((format) => (
-                        <div key={format} className="flex items-center space-x-2">
-                          <Checkbox 
-                            id={`format-${format}`}
-                            checked={newDocument.format.includes(format)}
-                            onCheckedChange={() => toggleFormat(format)}
-                          />
-                          <Label htmlFor={`format-${format}`}>{format}</Label>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <label htmlFor="maxSize" className="text-right">Max Size (MB)</label>
-                    <input
-                      id="maxSize"
-                      type="number"
-                      value={newDocument.maxSize}
-                      onChange={(e) => setNewDocument({...newDocument, maxSize: Number(e.target.value)})}
-                      className="col-span-3 border p-2 rounded"
-                      min="1"
-                    />
-                  </div>
-                  
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <div className="text-right">Mandatory</div>
-                    <div className="col-span-3">
-                      <input
-                        type="checkbox"
-                        checked={newDocument.mandatory}
-                        onChange={(e) => setNewDocument({...newDocument, mandatory: e.target.checked})}
-                        className="mr-2"
-                      />
-                      <label>Required document</label>
-                    </div>
-                  </div>
-                </div>
-                
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsAddDocumentOpen(false)}>Cancel</Button>
-                  <Button onClick={handleAddDocument}>Add Document</Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-
-            {/* Add Action Dialog */}
-            <Dialog open={isAddActionOpen} onOpenChange={setIsAddActionOpen}>
-              <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                  <DialogTitle>Add New Action</DialogTitle>
-                </DialogHeader>
-                
-                <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <label htmlFor="actionType" className="text-right">Action</label>
-                    <input
-                      id="actionType"
-                      value={newAction.action}
-                      onChange={(e) => setNewAction({...newAction, action: e.target.value})}
-                      className="col-span-3 border p-2 rounded"
-                    />
-                  </div>
-                  
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <label htmlFor="nextStage" className="text-right">Next Stage</label>
-                    <select
-                      id="nextStage"
-                      value={newAction.nextStage}
-                      onChange={(e) => setNewAction({...newAction, nextStage: e.target.value})}
-                      className="col-span-3 border p-2 rounded"
-                    >
-                      <option value="">Select a stage...</option>
-                      {stages.map((stage) => (
-                        <option key={stage} value={stage}>{stage}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsAddActionOpen(false)}>Cancel</Button>
-                  <Button onClick={handleAddAction}>Add Action</Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-
-            {/* Footer buttons */}
-            <div className="flex justify-end mt-8 space-x-4">
-              <Button 
-                onClick={handleSaveConfiguration} 
-                variant="outline"
-                disabled={isSaving || stages.length === 0}
-              >
-                Save Configuration
-              </Button>
-              <Button 
-                onClick={handleSaveAndPreview}
-                disabled={isSaving || stages.length === 0}
-              >
-                Save & Preview
-              </Button>
-            </div>
-          </>
-        )}
-      </main>
-    </div>
-  );
-};
-
-export default Index;
+                            <div className="space-y-1
