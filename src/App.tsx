@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import ClaimForm from "./pages/ClaimForm";
 import ViewClaims from "./pages/ViewClaims";
 import NotFound from "./pages/NotFound";
+import ViewConfigurations from "./pages/ViewConfigurations";
 
 const queryClient = new QueryClient();
 
@@ -23,6 +24,7 @@ const App = () => (
           <Route path="/config" element={<Index />} />
           <Route path="/claim-form" element={<ClaimForm />} />
           <Route path="/view-claims" element={<ViewClaims />} />
+          <Route path="/view-configurations" element={<ViewConfigurations />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

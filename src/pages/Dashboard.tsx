@@ -2,7 +2,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Settings, Search } from 'lucide-react';
+import { Settings, Search, List } from 'lucide-react';
 import { toast } from 'sonner';
 
 const Dashboard = () => {
@@ -20,7 +20,7 @@ const Dashboard = () => {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-12">
-        <div className="grid md:grid-cols-2 gap-8">
+        <div className="grid md:grid-cols-3 gap-8">
           <div className="bg-white p-8 rounded-lg shadow-sm border border-gray-200 transition-all hover:shadow-md">
             <div className="mb-4 flex justify-center">
               <div className="w-16 h-16 rounded-full bg-claims-blue flex items-center justify-center text-white">
@@ -57,6 +57,26 @@ const Dashboard = () => {
                 className="bg-claims-green hover:bg-green-600"
               >
                 View Claims
+              </Button>
+            </div>
+          </div>
+
+          <div className="bg-white p-8 rounded-lg shadow-sm border border-gray-200 transition-all hover:shadow-md">
+            <div className="mb-4 flex justify-center">
+              <div className="w-16 h-16 rounded-full bg-amber-500 flex items-center justify-center text-white">
+                <List className="w-8 h-8" />
+              </div>
+            </div>
+            <h2 className="text-xl font-medium text-center mb-3">View Configurations</h2>
+            <p className="text-gray-600 text-center mb-6">
+              Browse and preview existing claim journey configurations for all categories and services.
+            </p>
+            <div className="flex justify-center">
+              <Button 
+                onClick={() => navigate('/view-configurations')} 
+                className="bg-amber-500 hover:bg-amber-600"
+              >
+                View Configurations
               </Button>
             </div>
           </div>
