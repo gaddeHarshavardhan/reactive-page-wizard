@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ClaimStage from '@/components/ClaimStage';
@@ -670,12 +671,28 @@ const Index = () => {
               option: string;
               stage?: string;
               buttonLabel?: string;
-              condition?: string;
+              conditions?: Array<{
+                field: string;
+                operator: string;
+                value: string;
+              }>;
             } = {
               option: action.action.toLowerCase(),
             };
             
-            actionData.stage = action.nextStage;
+            // Set the next stage (if it's "end_of_claim", set it to empty string for the backend)
+            actionData.stage = action.nextStage === "end_of_claim" ? "" : action.nextStage;
+            
+            // Add condition if it exists
+            if (action.condition) {
+              actionData.conditions = [
+                {
+                  field: action.condition.field,
+                  operator: "equals", // Using "equals" as the default operator
+                  value: action.condition.value
+                }
+              ];
+            }
             
             return actionData;
           }) || []
@@ -694,6 +711,9 @@ const Index = () => {
       
       if (response.ok) {
         toast.success("Configuration saved successfully");
+        
+        // Log the sent data for debugging
+        console.log("Configuration sent:", JSON.stringify(transformedData, null, 2));
       } else {
         throw new Error("Failed to save configuration");
       }
