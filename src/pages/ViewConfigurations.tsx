@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -203,12 +204,17 @@ const ViewConfigurations = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 p-6">
       <div className="max-w-7xl mx-auto">
-        <div className="flex items-center mb-8">
-          <Button variant="ghost" onClick={() => navigate('/')} className="mr-2">
+        <div className="flex flex-col space-y-4 md:space-y-0 md:flex-row md:items-start mb-8">
+          <Button 
+            variant="ghost" 
+            onClick={() => navigate('/')} 
+            className="flex items-center text-gray-700 hover:text-gray-900 hover:bg-gray-100 w-fit"
+          >
             <ChevronLeft className="h-4 w-4 mr-2" />
             Back to Dashboard
           </Button>
-          <div>
+          
+          <div className="md:ml-10">
             <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-700">Configuration Manager</h1>
             <p className="text-gray-500 mt-1">View and manage your claim configurations</p>
           </div>
