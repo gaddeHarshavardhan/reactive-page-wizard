@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,8 +24,15 @@ interface ClaimResult {
 
 interface ClaimDetailsData {
   claimType: string;
-  customerId: string;
-  productId: string;
+  customerId?: string;
+  productId?: string;
+  srId: string;
+  customerName: string;
+  deviceMake: string;
+  dateCreated: string;
+  status: string;
+  contact: string;
+  currentStage: string;
   stageData: {
     [key: string]: any;
   }
@@ -60,8 +68,8 @@ const ViewClaims = () => {
       const mockResults: ClaimResult[] = [{
         id: "1",
         referenceNumber: searchQuery,
-        status: "In Progress",
-        dateSubmitted: new Date().toISOString().split('T')[0],
+        status: claimData.status || "In Progress",
+        dateSubmitted: claimData.dateCreated || new Date().toISOString().split('T')[0],
         claimType: claimData.claimType,
         customerId: claimData.customerId,
         productId: claimData.productId
@@ -80,16 +88,20 @@ const ViewClaims = () => {
       // Fallback for testing
       if (searchQuery === "12345") {
         // Mock data for testing only
-        const mockData = {
+        const mockData: ClaimDetailsData = {
           claimType: "Mobile Protection",
           customerId: "CUST123456",
           productId: "PROD789012",
+          srId: "SR123456",
+          customerName: "John Smith",
+          deviceMake: "Apple",
+          dateCreated: "2023-09-15",
+          status: "In Progress",
+          contact: "+1 (555) 123-4567",
+          currentStage: "Document Upload",
           stageData: {
-            claim_submission: {
-              device_model: "iPhone 14",
-              issue_type: "Screen Damage",
-              purchase_date: "2023-12-10",
-              description: "Phone screen cracked after accidental drop"
+            "Document Upload": {
+              dateOfIncident: "2023-09-10"
             }
           }
         };
@@ -140,16 +152,20 @@ const ViewClaims = () => {
         
         // For demo purposes, set mock data if API fails
         if (referenceNumber === '12345') {
-          const mockData = {
+          const mockData: ClaimDetailsData = {
             claimType: "Mobile Protection",
             customerId: "CUST123456",
             productId: "PROD789012",
+            srId: "SR123456",
+            customerName: "John Smith",
+            deviceMake: "Apple",
+            dateCreated: "2023-09-15",
+            status: "In Progress",
+            contact: "+1 (555) 123-4567",
+            currentStage: "Document Upload",
             stageData: {
-              claim_submission: {
-                device_model: "iPhone 14",
-                issue_type: "Screen Damage",
-                purchase_date: "2023-12-10",
-                description: "Phone screen cracked after accidental drop"
+              "Document Upload": {
+                dateOfIncident: "2023-09-10"
               }
             }
           };

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
   Card, 
@@ -40,24 +41,26 @@ interface ClaimDetailsProps {
   }
 }
 
+// Updated interface to match actual API response format
 interface ClaimConfig {
-  stages: {
-    id: string;
-    name: string;
-    formFields?: {
-      id: string;
-      label: string;
+  id: number;
+  categoryName: string;
+  configuration: {
+    stageName: string;
+    fields?: {
+      name: string;
       type: string;
       mandatory: boolean;
-      validation?: string;
-      options?: string[];
+      validation: string;
     }[];
     documents?: {
-      id: string;
-      type: string;
-      format: string;
-      mandatory: boolean;
-      maxSize: number;
+      name: string;
+      mandatory: string;
+      allowedFormat: string[];
+    }[];
+    actions?: {
+      option: string;
+      stage: string;
     }[];
   }[];
 }
@@ -122,50 +125,56 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
         
         // Mock data for demonstration
         const mockConfig: ClaimConfig = {
-          stages: [
+          id: 1,
+          categoryName: "PE",
+          configuration: [
             {
-              id: "device_details",
-              name: "Device Details",
-              formFields: [
-                { id: "device_model", label: "Device Model", type: "select", mandatory: true, validation: "Required" },
-                { id: "issue_type", label: "Issue Type", type: "radio", mandatory: true, validation: "Required", 
-                  options: ["Screen Damage", "Battery Issue", "Water Damage", "Not Powering On"] },
-                { id: "purchase_date", label: "Purchase Date", type: "date", mandatory: true, validation: "Required" },
-                { id: "description", label: "Description", type: "textarea", mandatory: false }
+              stageName: "Document Upload",
+              fields: [
+                {
+                  name: "dateOfIncident",
+                  type: "date",
+                  mandatory: true,
+                  validation: "Cannot be Future Date"
+                }
               ],
               documents: [
-                { 
-                  id: "proof_of_purchase", 
-                  type: "Proof of Purchase", 
-                  format: "PDF", 
-                  mandatory: true, 
-                  maxSize: 10 
+                {
+                  name: "Device Photos",
+                  mandatory: "false",
+                  allowedFormat: ["JPG", "PNG"]
+                }
+              ],
+              actions: [
+                {
+                  option: "submit",
+                  stage: "Claim Assessment"
                 }
               ]
             },
             {
-              id: "document_upload",
-              name: "Document Upload",
+              stageName: "Claim Assessment",
+              fields: [
+                {
+                  name: "claim amount",
+                  type: "number",
+                  mandatory: true,
+                  validation: "Cannot be Negative"
+                }
+              ],
               documents: [
-                { 
-                  id: "proof_of_purchase", 
-                  type: "Proof of Purchase", 
-                  format: "PDF", 
-                  mandatory: true, 
-                  maxSize: 10 
-                },
-                { 
-                  id: "device_photos", 
-                  type: "Device Photos", 
-                  format: "JPG, PNG", 
-                  mandatory: true, 
-                  maxSize: 5 
+                {
+                  name: "Estimate Document",
+                  mandatory: "true",
+                  allowedFormat: ["PDF", "JPG", "PNG"]
+                }
+              ],
+              actions: [
+                {
+                  option: "submit",
+                  stage: "Complete Claim"
                 }
               ]
-            },
-            {
-              id: "claim_assessment",
-              name: "Claim Assessment"
             }
           ]
         };
@@ -178,13 +187,10 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
           dateCreated: "Mar 21, 2025",
           status: "New",
           contact: "+1 (555) 123-4567",
-          currentStage: "device_details",
+          currentStage: "Document Upload",
           stageData: {
-            device_details: {
-              device_model: "iPhone 14",
-              issue_type: "Screen Damage",
-              purchase_date: "2023-12-10",
-              description: "Phone screen cracked after accidental drop"
+            "Document Upload": {
+              dateOfIncident: "2025-03-15"
             }
           }
         };
@@ -193,9 +199,6 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
         setClaimData(mockClaimData);
         setActiveTab(mockClaimData.currentStage);
         setFormValues(mockClaimData.stageData);
-        if (mockClaimData.stageData.device_details?.issue_type) {
-          setSelectedIssueType(mockClaimData.stageData.device_details.issue_type);
-        }
       } finally {
         setLoading(false);
       }
@@ -204,22 +207,22 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
     fetchData();
   }, [claimId]);
 
-  const findStageIndex = (stageId: string): number => {
+  const getStageIndex = (stageName: string): number => {
     if (!claimConfig) return -1;
-    return claimConfig.stages.findIndex(stage => stage.id === stageId);
+    return claimConfig.configuration.findIndex(stage => stage.stageName === stageName);
   };
 
   const getCurrentStageIndex = (): number => {
     if (!claimData || !claimData.currentStage) return 0;
-    return findStageIndex(claimData.currentStage);
+    return getStageIndex(claimData.currentStage);
   };
 
-  const handleFormChange = (stageId: string, fieldId: string, value: any) => {
+  const handleFormChange = (stageName: string, fieldName: string, value: any) => {
     setFormValues(prev => ({
       ...prev,
-      [stageId]: {
-        ...(prev[stageId] || {}),
-        [fieldId]: value
+      [stageName]: {
+        ...(prev[stageName] || {}),
+        [fieldName]: value
       }
     }));
   };
@@ -292,8 +295,8 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
       
       {/* Claim Progress Timeline */}
       <div className="flex justify-center items-center py-8">
-        {claimConfig.stages.map((stage, index) => (
-          <React.Fragment key={stage.id}>
+        {claimConfig.configuration.map((stage, index) => (
+          <React.Fragment key={stage.stageName}>
             <div className="flex flex-col items-center">
               <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
                 index < currentStageIndex 
@@ -304,10 +307,10 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
               }`}>
                 {index + 1}
               </div>
-              <span className="text-sm mt-2 text-center max-w-[120px]">{stage.name}</span>
+              <span className="text-sm mt-2 text-center max-w-[120px]">{stage.stageName}</span>
             </div>
             
-            {index < claimConfig.stages.length - 1 && (
+            {index < claimConfig.configuration.length - 1 && (
               <div className={`h-[2px] w-24 mx-2 ${
                 index < currentStageIndex ? 'bg-blue-500' : 'bg-gray-300'
               }`} />
@@ -318,79 +321,46 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
       
       {/* Stage Content */}
       <div className="bg-white p-6 rounded-lg shadow-sm">
-        {activeTab && claimConfig.stages.find(stage => stage.id === activeTab) && (
+        {activeTab && claimConfig.configuration.find(stage => stage.stageName === activeTab) && (
           <div>
             <h3 className="text-xl font-medium mb-6">
-              {claimConfig.stages.find(stage => stage.id === activeTab)?.name}
+              {activeTab}
             </h3>
             
             {/* Form Fields Section */}
-            {claimConfig.stages.find(stage => stage.id === activeTab)?.formFields && (
+            {claimConfig.configuration.find(stage => stage.stageName === activeTab)?.fields && (
               <div className="mb-8">
-                <h4 className="text-lg font-medium mb-4">Device Information</h4>
+                <h4 className="text-lg font-medium mb-4">Form Fields</h4>
                 
                 <div className="space-y-6">
-                  {claimConfig.stages.find(stage => stage.id === activeTab)?.formFields?.map(field => (
-                    <div key={field.id} className="space-y-2">
+                  {claimConfig.configuration.find(stage => stage.stageName === activeTab)?.fields?.map(field => (
+                    <div key={field.name} className="space-y-2">
                       <div className="flex items-center">
-                        <Label htmlFor={field.id} className="block text-gray-700 font-medium">
-                          {field.label}
+                        <Label htmlFor={field.name} className="block text-gray-700 font-medium">
+                          {field.name}
                         </Label>
                         {field.mandatory && (
                           <span className="ml-1 text-red-500 text-lg">*</span>
                         )}
                       </div>
                       
-                      {field.type === 'select' && (
-                        <div className="relative">
-                          <select
-                            id={field.id}
-                            className="w-full p-3 border border-gray-300 rounded-md bg-white appearance-none pr-10"
-                            value={formValues[activeTab]?.[field.id] || ''}
-                            onChange={(e) => handleFormChange(activeTab, field.id, e.target.value)}
-                          >
-                            <option value="">Select Device Model</option>
-                            <option value="iPhone 14">iPhone 14</option>
-                            <option value="iPhone 13">iPhone 13</option>
-                            <option value="iPhone 12">iPhone 12</option>
-                            <option value="Samsung Galaxy S22">Samsung Galaxy S22</option>
-                          </select>
-                          <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                            </svg>
-                          </div>
-                        </div>
-                      )}
-                      
-                      {field.type === 'radio' && field.options && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {field.options.map(option => (
-                            <div key={option} className="flex items-center">
-                              <div 
-                                className={`w-6 h-6 rounded-full border-2 flex items-center justify-center mr-2 cursor-pointer ${
-                                  selectedIssueType === option ? 'border-blue-500' : 'border-gray-300'
-                                }`}
-                                onClick={() => handleIssueTypeChange(option)}
-                              >
-                                {selectedIssueType === option && (
-                                  <div className="w-4 h-4 rounded-full bg-blue-500" />
-                                )}
-                              </div>
-                              <span>{option}</span>
-                            </div>
-                          ))}
-                        </div>
+                      {field.type === 'text' && (
+                        <Input
+                          id={field.name}
+                          type="text"
+                          value={formValues[activeTab]?.[field.name] || ''}
+                          onChange={(e) => handleFormChange(activeTab, field.name, e.target.value)}
+                          className="w-full p-3 border border-gray-300 rounded-md"
+                        />
                       )}
                       
                       {field.type === 'date' && (
                         <div className="relative">
                           <Input
-                            id={field.id}
-                            type="text"
-                            placeholder="MM/DD/YYYY"
-                            value={formValues[activeTab]?.[field.id] || ''}
-                            onChange={(e) => handleFormChange(activeTab, field.id, e.target.value)}
+                            id={field.name}
+                            type="date"
+                            value={formValues[activeTab]?.[field.name] || ''}
+                            onChange={(e) => handleFormChange(activeTab, field.name, e.target.value)}
                             className="w-full p-3 border border-gray-300 rounded-md"
                           />
                           <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
@@ -399,12 +369,22 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
                         </div>
                       )}
                       
+                      {field.type === 'number' && (
+                        <Input
+                          id={field.name}
+                          type="number"
+                          value={formValues[activeTab]?.[field.name] || ''}
+                          onChange={(e) => handleFormChange(activeTab, field.name, e.target.value)}
+                          className="w-full p-3 border border-gray-300 rounded-md"
+                        />
+                      )}
+                      
                       {field.type === 'textarea' && (
                         <Textarea
-                          id={field.id}
-                          placeholder="Describe the issue in detail..."
-                          value={formValues[activeTab]?.[field.id] || ''}
-                          onChange={(e) => handleFormChange(activeTab, field.id, e.target.value)}
+                          id={field.name}
+                          placeholder="Enter description..."
+                          value={formValues[activeTab]?.[field.name] || ''}
+                          onChange={(e) => handleFormChange(activeTab, field.name, e.target.value)}
                           className="w-full p-3 border border-gray-300 rounded-md min-h-[120px]"
                         />
                       )}
@@ -415,21 +395,21 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
             )}
             
             {/* Documents Section */}
-            {claimConfig.stages.find(stage => stage.id === activeTab)?.documents && (
+            {claimConfig.configuration.find(stage => stage.stageName === activeTab)?.documents && (
               <div className="mb-8">
                 <h4 className="text-lg font-medium mb-4">Required Documents</h4>
                 
-                {claimConfig.stages.find(stage => stage.id === activeTab)?.documents?.map(doc => (
-                  <div key={doc.id} className="border border-gray-200 rounded-lg p-4 mb-4">
+                {claimConfig.configuration.find(stage => stage.stageName === activeTab)?.documents?.map(doc => (
+                  <div key={doc.name} className="border border-gray-200 rounded-lg p-4 mb-4">
                     <div className="flex justify-between items-center">
                       <div>
                         <div className="flex items-center mb-1">
-                          <h5 className="font-medium">{doc.type}</h5>
-                          {doc.mandatory && (
+                          <h5 className="font-medium">{doc.name}</h5>
+                          {doc.mandatory === "true" && (
                             <span className="ml-1 text-red-500 text-lg">*</span>
                           )}
                         </div>
-                        <p className="text-sm text-gray-500">Format: {doc.format} (Max: {doc.maxSize}MB)</p>
+                        <p className="text-sm text-gray-500">Format: {doc.allowedFormat.join(", ")}</p>
                       </div>
                       <div className="flex items-center">
                         <Button variant="outline" className="bg-gray-100 mr-2">
@@ -453,12 +433,16 @@ const ClaimDetails: React.FC<ClaimDetailsProps> = ({ claimId = "sr_95961497", cl
               >
                 Save for Later
               </Button>
-              <Button 
-                onClick={handleContinue}
-                className="bg-claims-blue hover:bg-claims-blue-dark"
-              >
-                Continue
-              </Button>
+              
+              {claimConfig.configuration.find(stage => stage.stageName === activeTab)?.actions?.map(action => (
+                <Button 
+                  key={action.option}
+                  onClick={handleContinue}
+                  className="bg-claims-blue hover:bg-claims-blue-dark"
+                >
+                  {action.option === "submit" ? "Submit" : action.option}
+                </Button>
+              ))}
             </div>
           </div>
         )}
