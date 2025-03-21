@@ -27,9 +27,9 @@ const Dashboard = () => {
                 <Settings className="w-8 h-8" />
               </div>
             </div>
-            <h2 className="text-xl font-medium text-center mb-3">Configure Claim Form</h2>
+            <h2 className="text-xl font-medium text-center mb-3">Configure Claim Journey</h2>
             <p className="text-gray-600 text-center mb-6">
-              Create or modify claim form configurations with multiple stages, fields, and document requirements.
+              Create or modify claim journey configurations with multiple stages, fields, and document requirements.
             </p>
             <div className="flex justify-center">
               <Button 
