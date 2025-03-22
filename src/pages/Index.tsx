@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ClaimStage from '@/components/ClaimStage';
@@ -731,6 +730,11 @@ const Index = () => {
         
         // Log the sent data for debugging
         console.log("Configuration sent:", JSON.stringify(transformedData, null, 2));
+        
+        // Add redirect to home page after successful save
+        setTimeout(() => {
+          navigate('/');
+        }, 1500); // Short delay to allow the success toast to be visible
       } else {
         throw new Error("Failed to save configuration");
       }
