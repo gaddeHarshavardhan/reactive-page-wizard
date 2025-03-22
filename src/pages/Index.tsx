@@ -778,7 +778,7 @@ const Index = () => {
         <div className="max-w-7xl mx-auto">
           <div className="flex justify-between items-center">
             <h1 className="text-2xl font-medium animate-fade-in">Configurable Claims Framework</h1>
-            <div className="text-lg animate-fade-in">Claim Configuration</div>
+            {/* <div className="text-lg animate-fade-in">Claim Configuration</div> */}
           </div>
         </div>
       </header>
